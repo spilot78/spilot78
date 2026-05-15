@@ -6,184 +6,203 @@
   <title>Military Map – MIL-STD-2525</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; background: #0d1117; }
-
     #app { display: flex; height: 100vh; }
 
-    /* ── Sidebar ──────────────────────────────────────── */
+    /* ── Sidebar ─────────────────────────────────────────────── */
     #sidebar {
-      width: 260px;
-      min-width: 260px;
-      background: #161b22;
-      border-right: 1px solid #30363d;
-      display: flex;
-      flex-direction: column;
-      color: #e6edf3;
+      width: 264px; min-width: 264px;
+      background: #161b22; border-right: 1px solid #30363d;
+      display: flex; flex-direction: column; color: #e6edf3;
     }
 
     #sidebar-header {
-      background: #0d3750;
-      padding: 13px 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      border-bottom: 2px solid #1f6f8b;
-      flex-shrink: 0;
+      background: #0d3750; padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      border-bottom: 2px solid #1f6f8b; flex-shrink: 0;
     }
-
     #sidebar-header h1 {
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: #79c0ff;
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; color: #79c0ff;
     }
 
-    .tabs {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      border-bottom: 1px solid #30363d;
-      flex-shrink: 0;
+    /* Mode tabs: Units | Graphics */
+    #mode-tabs {
+      display: grid; grid-template-columns: 1fr 1fr;
+      background: #0d1117; border-bottom: 1px solid #30363d; flex-shrink: 0;
     }
+    .mode-tab {
+      background: none; border: none; border-bottom: 2px solid transparent;
+      padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; cursor: pointer; color: #8b949e; transition: all 0.12s;
+    }
+    .mode-tab:hover { color: #e6edf3; background: #161b22; }
+    .mode-tab.active { color: #58a6ff; border-bottom-color: #58a6ff; background: #161b22; }
 
+    /* Panels */
+    .panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .panel.active { display: flex; }
+
+    /* Affiliation tabs (shared style) */
+    .affil-tabs {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      border-bottom: 1px solid #30363d; flex-shrink: 0;
+    }
     .tab-btn {
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      padding: 9px 2px;
-      font-size: 9px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      cursor: pointer;
-      color: #8b949e;
-      transition: all 0.12s;
+      background: none; border: none; border-bottom: 2px solid transparent;
+      padding: 8px 2px; font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.4px; cursor: pointer; color: #8b949e; transition: all 0.12s;
     }
-
     .tab-btn:hover { color: #e6edf3; background: #1c2128; }
-
-    .tab-btn.active { color: #58a6ff; border-bottom-color: #58a6ff; background: #1c2128; }
-
-    /* affiliation color accents */
+    .tab-btn.active { background: #1c2128; }
     .tab-btn[data-affil="F"].active { color: #3fb950; border-bottom-color: #3fb950; }
     .tab-btn[data-affil="H"].active { color: #f85149; border-bottom-color: #f85149; }
     .tab-btn[data-affil="N"].active { color: #d29922; border-bottom-color: #d29922; }
     .tab-btn[data-affil="U"].active { color: #a5d6ff; border-bottom-color: #a5d6ff; }
 
-    #palette {
-      flex: 1;
-      overflow-y: auto;
-      padding: 6px 8px 12px;
-      scrollbar-width: thin;
-      scrollbar-color: #30363d #161b22;
+    /* Scrollable palette */
+    .palette {
+      flex: 1; overflow-y: auto; padding: 6px 8px 12px;
+      scrollbar-width: thin; scrollbar-color: #30363d #161b22;
     }
-
-    #palette::-webkit-scrollbar { width: 5px; }
-    #palette::-webkit-scrollbar-track { background: #161b22; }
-    #palette::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+    .palette::-webkit-scrollbar { width: 5px; }
+    .palette::-webkit-scrollbar-track { background: #161b22; }
+    .palette::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
 
     .cat-label {
-      font-size: 9px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.2px;
-      color: #484f58;
-      padding: 10px 4px 4px;
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.2px; color: #484f58; padding: 10px 4px 4px;
     }
 
+    /* Unit symbol items (drag-and-drop) */
     .sym-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 5px 8px;
-      margin-bottom: 2px;
-      border-radius: 5px;
-      cursor: grab;
-      border: 1px solid transparent;
-      transition: background 0.12s, border-color 0.12s;
-      user-select: none;
+      display: flex; align-items: center; gap: 10px;
+      padding: 5px 8px; margin-bottom: 2px; border-radius: 5px;
+      cursor: grab; border: 1px solid transparent;
+      transition: background 0.12s, border-color 0.12s; user-select: none;
     }
-
     .sym-item:hover { background: #1c2128; border-color: #30363d; }
     .sym-item.dragging { opacity: 0.4; cursor: grabbing; }
-    .sym-icon { flex-shrink: 0; display: flex; align-items: center; }
-    .sym-name { font-size: 11.5px; color: #c9d1d9; line-height: 1.2; }
+
+    /* Tactical graphic items (click to draw) */
+    .tg-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 6px 8px; margin-bottom: 2px; border-radius: 5px;
+      cursor: pointer; border: 1px solid transparent;
+      transition: background 0.12s, border-color 0.12s; user-select: none;
+    }
+    .tg-item:hover { background: #1c2128; border-color: #30363d; }
+    .tg-item.selected { background: #1c3a5e; border-color: #388bfd; }
+
+    .item-icon { flex-shrink: 0; display: flex; align-items: center; }
+    .item-name { font-size: 11.5px; color: #c9d1d9; flex: 1; line-height: 1.2; }
+
+    .type-badge {
+      font-size: 8px; font-weight: 700; padding: 1px 5px;
+      border-radius: 3px; flex-shrink: 0;
+    }
+    .badge-pt { background: #1f4a2e; color: #3fb950; }
+    .badge-ln { background: #1c3a5e; color: #58a6ff; }
+    .badge-ar { background: #3a1f4a; color: #bc8cff; }
 
     #sidebar-footer {
-      padding: 9px 14px;
-      border-top: 1px solid #30363d;
-      font-size: 10px;
-      color: #484f58;
-      text-align: center;
-      flex-shrink: 0;
+      padding: 9px 14px; border-top: 1px solid #30363d;
+      font-size: 10px; color: #484f58; text-align: center; flex-shrink: 0;
     }
 
-    /* ── Map ──────────────────────────────────────────── */
+    /* ── Map ──────────────────────────────────────────────────── */
     #map-wrap { flex: 1; position: relative; }
     #map { width: 100%; height: 100%; }
 
+    /* Drop zone for unit drag */
     #drop-zone {
-      position: absolute;
-      inset: 0;
-      z-index: 5;
-      display: none;
-      cursor: crosshair;
+      position: absolute; inset: 0; z-index: 5; display: none; cursor: crosshair;
     }
-
     #drop-zone.active {
-      display: block;
-      background: rgba(88, 166, 255, 0.04);
-      outline: 2px dashed rgba(88, 166, 255, 0.35);
-      outline-offset: -4px;
+      display: block; background: rgba(88,166,255,0.04);
+      outline: 2px dashed rgba(88,166,255,0.35); outline-offset: -4px;
     }
-
     #drop-hint {
-      position: absolute;
-      bottom: 28px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(13, 55, 80, 0.92);
-      color: #79c0ff;
-      padding: 10px 22px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.8px;
-      pointer-events: none;
-      border: 1px solid #1f6f8b;
-      white-space: nowrap;
+      position: absolute; bottom: 54px; left: 50%; transform: translateX(-50%);
+      background: rgba(13,55,80,0.92); color: #79c0ff; padding: 10px 22px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; letter-spacing: 0.8px;
+      pointer-events: none; border: 1px solid #1f6f8b; white-space: nowrap;
     }
 
+    /* Drawing instruction bar */
+    #drawing-bar {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+      background: rgba(10,16,26,0.96); border-top: 1px solid #388bfd;
+      display: none; align-items: center; gap: 14px; padding: 10px 16px;
+    }
+    #drawing-bar.active { display: flex; }
+    #drawing-title { font-size: 12px; font-weight: 700; color: #79c0ff; white-space: nowrap; }
+    #drawing-hint  { font-size: 11px; color: #8b949e; flex: 1; }
+    #btn-undo {
+      padding: 4px 10px; background: #21262d; color: #e3b341;
+      border: 1px solid #e3b341; border-radius: 4px; cursor: pointer;
+      font-size: 11px; font-weight: 600; white-space: nowrap;
+    }
+    #btn-undo:hover { background: rgba(227,179,65,0.12); }
+    #btn-finish {
+      padding: 4px 10px; background: #21262d; color: #3fb950;
+      border: 1px solid #3fb950; border-radius: 4px; cursor: pointer;
+      font-size: 11px; font-weight: 600; white-space: nowrap;
+    }
+    #btn-finish:hover { background: rgba(63,185,80,0.12); }
+    #btn-cancel {
+      padding: 4px 10px; background: #21262d; color: #f85149;
+      border: 1px solid #f85149; border-radius: 4px; cursor: pointer;
+      font-size: 11px; font-weight: 600; white-space: nowrap;
+    }
+    #btn-cancel:hover { background: rgba(248,81,73,0.12); }
+
+    /* Name modal */
+    #name-modal {
+      position: absolute; inset: 0; z-index: 30;
+      background: rgba(0,0,0,0.6); display: none;
+      align-items: center; justify-content: center;
+    }
+    #name-modal.open { display: flex; }
+    #name-modal-box {
+      background: #1c2128; border: 1px solid #388bfd; border-radius: 8px;
+      padding: 20px 24px; min-width: 300px; box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    }
+    #name-modal-title { font-size: 13px; color: #79c0ff; margin-bottom: 12px; font-weight: 700; }
+    #name-input {
+      width: 100%; padding: 8px 10px; background: #0d1117;
+      border: 1px solid #30363d; border-radius: 5px;
+      color: #e6edf3; font-size: 13px; margin-bottom: 14px; outline: none;
+    }
+    #name-input:focus { border-color: #388bfd; }
+    .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-btn {
+      padding: 6px 14px; border-radius: 4px; font-size: 12px;
+      font-weight: 600; cursor: pointer; border: 1px solid transparent;
+    }
+    #name-ok   { background: #388bfd; color: #fff; }
+    #name-ok:hover { background: #58a6ff; }
+    #name-skip { background: none; color: #8b949e; border-color: #30363d; }
+    #name-skip:hover { color: #e6edf3; }
+
+    /* API key notice */
     #api-key-notice {
-      position: absolute;
-      top: 14px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 20;
-      background: rgba(180, 30, 30, 0.94);
-      color: #ffd;
-      padding: 10px 18px;
-      border-radius: 6px;
-      font-size: 11.5px;
-      text-align: center;
-      line-height: 1.55;
-      max-width: 460px;
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      z-index: 20; background: rgba(180,30,30,0.94); color: #ffd;
+      padding: 10px 18px; border-radius: 6px; font-size: 11.5px;
+      text-align: center; line-height: 1.55; max-width: 460px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.5);
     }
-
     #api-key-notice code {
-      background: rgba(255,255,255,0.15);
-      padding: 1px 5px;
-      border-radius: 3px;
-      font-size: 11px;
+      background: rgba(255,255,255,0.15); padding: 1px 5px;
+      border-radius: 3px; font-size: 11px;
     }
   </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- ── Sidebar ────────────────────────────────────────────── -->
+  <!-- ── Sidebar ────────────────────────────────────────── -->
   <div id="sidebar">
     <div id="sidebar-header">
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -193,39 +212,78 @@
       <h1>MIL-STD-2525</h1>
     </div>
 
-    <div class="tabs">
-      <button class="tab-btn active" data-affil="F">Friendly</button>
-      <button class="tab-btn"        data-affil="H">Hostile</button>
-      <button class="tab-btn"        data-affil="N">Neutral</button>
-      <button class="tab-btn"        data-affil="U">Unknown</button>
+    <div id="mode-tabs">
+      <button class="mode-tab active" data-mode="units">Units</button>
+      <button class="mode-tab"        data-mode="graphics">Graphics</button>
     </div>
 
-    <div id="palette"></div>
+    <!-- Units panel -->
+    <div id="units-panel" class="panel active">
+      <div class="affil-tabs" id="unit-affil-tabs">
+        <button class="tab-btn active" data-affil="F">Friendly</button>
+        <button class="tab-btn"        data-affil="H">Hostile</button>
+        <button class="tab-btn"        data-affil="N">Neutral</button>
+        <button class="tab-btn"        data-affil="U">Unknown</button>
+      </div>
+      <div class="palette" id="unit-palette"></div>
+    </div>
 
-    <div id="sidebar-footer">Drag a symbol onto the map to place it</div>
+    <!-- Graphics panel -->
+    <div id="graphics-panel" class="panel">
+      <div class="affil-tabs" id="tg-affil-tabs">
+        <button class="tab-btn active" data-affil="F">Friendly</button>
+        <button class="tab-btn"        data-affil="H">Hostile</button>
+        <button class="tab-btn"        data-affil="N">Neutral</button>
+        <button class="tab-btn"        data-affil="U">Unknown</button>
+      </div>
+      <div class="palette" id="tg-palette"></div>
+    </div>
+
+    <div id="sidebar-footer" style="line-height:1.5">
+      Units: drag to map &nbsp;·&nbsp; Graphics: click to draw
+    </div>
   </div>
 
-  <!-- ── Map ───────────────────────────────────────────────── -->
+  <!-- ── Map ───────────────────────────────────────────── -->
   <div id="map-wrap">
     <div id="map"></div>
+
+    <!-- Unit drag overlay -->
     <div id="drop-zone">
       <div id="drop-hint">Drop to Place Unit</div>
+    </div>
+
+    <!-- Drawing instruction bar -->
+    <div id="drawing-bar">
+      <span id="drawing-title"></span>
+      <span id="drawing-hint"></span>
+      <button id="btn-undo">Undo Point</button>
+      <button id="btn-finish">Finish</button>
+      <button id="btn-cancel">Cancel</button>
+    </div>
+
+    <!-- Name prompt modal -->
+    <div id="name-modal">
+      <div id="name-modal-box">
+        <div id="name-modal-title">Name this graphic</div>
+        <input type="text" id="name-input" placeholder="e.g. PL ALPHA" autocomplete="off">
+        <div class="modal-btns">
+          <button class="modal-btn" id="name-skip">Skip</button>
+          <button class="modal-btn" id="name-ok">Place</button>
+        </div>
+      </div>
     </div>
   </div>
 
 </div>
 
-<!-- milsymbol – MIL-STD-2525 / APP-6 SVG renderer -->
 <script src="https://cdn.jsdelivr.net/npm/milsymbol@2.2.0/dist/milsymbol.js"></script>
-
 <script>
-// ────────────────────────────────────────────────────────────────
-// Symbol catalogue
-// Use '$' as the affiliation placeholder (replaced at render time)
-// SIDC format: 15-char MIL-STD-2525C
-// ────────────────────────────────────────────────────────────────
-const SYMBOL_DEFS = [
-  // Ground Combat
+
+// ═══════════════════════════════════════════════════════════════
+// UNIT SYMBOL CATALOGUE  ($ = affiliation placeholder)
+// ═══════════════════════════════════════════════════════════════
+const UNIT_DEFS = [
   { cat: 'Ground Combat' },
   { sidc: 'S$GPUCI--------', label: 'Infantry' },
   { sidc: 'S$GPUCA--------', label: 'Armor' },
@@ -236,48 +294,93 @@ const SYMBOL_DEFS = [
   { sidc: 'S$GPUCIZ-------', label: 'Mech. Infantry' },
   { sidc: 'S$GPUCAT-------', label: 'Anti-Tank' },
   { sidc: 'S$GPUCIM-------', label: 'Mortar' },
-  // Command & Control
   { cat: 'Command & Control' },
   { sidc: 'S$GPUH---------', label: 'HQ / Command Post' },
   { sidc: 'S$GPUHI--------', label: 'HQ Infantry' },
   { sidc: 'S$GPUHA--------', label: 'HQ Armor' },
-  // Aviation
   { cat: 'Aviation' },
   { sidc: 'S$APMFF--------', label: 'Fighter' },
   { sidc: 'S$APMFH--------', label: 'Attack Helicopter' },
   { sidc: 'S$APMFU--------', label: 'Utility Helicopter' },
   { sidc: 'S$APMFB--------', label: 'Bomber' },
   { sidc: 'S$APMFD--------', label: 'UAV / Drone' },
-  // Combat Service Support
   { cat: 'Combat Service Support' },
   { sidc: 'S$GPUSS--------', label: 'Supply' },
   { sidc: 'S$GPUSM--------', label: 'Maintenance' },
   { sidc: 'S$GPUSD--------', label: 'Medical' },
   { sidc: 'S$GPUST--------', label: 'Transportation' },
-  // Intelligence / ISR
   { cat: 'Intelligence / ISR' },
   { sidc: 'S$GPUEO--------', label: 'Observation Post' },
   { sidc: 'S$GPESR--------', label: 'Radar' },
 ];
 
-// ────────────────────────────────────────────────────────────────
-// State
-// ────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// TACTICAL GRAPHIC CATALOGUE
+// type: 'point' | 'line' | 'area'
+// dash: [on, off] pixel values for dashed stroke
+// arrow: true → arrowhead at end
+// ═══════════════════════════════════════════════════════════════
+const TG_DEFS = [
+  { cat: 'Control Points' },
+  { type: 'point', sidc: 'G$GPGPC-------', label: 'Contact Point',   abbr: 'CP'  },
+  { type: 'point', sidc: 'G$GPGPH-------', label: 'Checkpoint',       abbr: 'CKP' },
+  { type: 'point', sidc: 'G$GPGPS-------', label: 'Start Point',      abbr: 'SP'  },
+  { type: 'point', sidc: 'G$GPGPR-------', label: 'Release Point',    abbr: 'RP'  },
+  { type: 'point', sidc: 'G$GPGPP-------', label: 'Rally Point',      abbr: 'RP'  },
+  { cat: 'Lines' },
+  { type: 'line', label: 'Phase Line',          abbr: 'PL',   dash: [10,6],  weight: 2, arrow: false },
+  { type: 'line', label: 'Line of Departure',   abbr: 'LD',   dash: null,    weight: 2, arrow: false },
+  { type: 'line', label: 'FLOT',                abbr: 'FLOT', dash: [4,3],   weight: 2, arrow: false },
+  { type: 'line', label: 'Boundary',            abbr: 'BDY',  dash: [12,5],  weight: 2, arrow: false, forceColor: '#666' },
+  { type: 'line', label: 'Axis of Advance',     abbr: '',     dash: null,    weight: 3, arrow: true  },
+  { type: 'line', label: 'Direction of Attack', abbr: 'DOA',  dash: [3,4],   weight: 2, arrow: true  },
+  { cat: 'Areas' },
+  { type: 'area', label: 'Battle Position',     abbr: 'BP',  dash: [10,5]  },
+  { type: 'area', label: 'Assembly Area',       abbr: 'AA',  dash: null    },
+  { type: 'area', label: 'Engagement Area',     abbr: 'EA',  dash: null    },
+  { type: 'area', label: 'Fire Support Area',   abbr: 'FSA', dash: [4,3]   },
+  { type: 'area', label: 'Air Defense Area',    abbr: 'ADA', dash: null    },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// NATO affiliation colours
+// ═══════════════════════════════════════════════════════════════
+const AFFIL_COLOR = { F: '#004B87', H: '#C8102E', N: '#006B3F', U: '#BF8B00' };
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
 let map         = null;
-let currentAffil = 'F';
+let unitAffil   = 'F';
+let tgAffil     = 'F';
 let dragSidc    = null;
 let dragLabel   = null;
 let uidCounter  = 0;
-const placed    = [];   // { uid, marker, infoWin }
+const placedUnits = [];
+const placedTGs   = [];
 
-// ────────────────────────────────────────────────────────────────
-// Palette rendering
-// ────────────────────────────────────────────────────────────────
-function buildPalette(affil) {
-  const container = document.getElementById('palette');
+// Drawing state
+const drw = {
+  active:   false,
+  def:      null,
+  affil:    'F',
+  points:   [],
+  preview:  null,
+  previewClose: null,
+  dotMarkers:   [],
+  listeners:    [],
+};
+
+let selectedTGEl = null;  // currently highlighted palette item
+
+// ═══════════════════════════════════════════════════════════════
+// UNIT PALETTE
+// ═══════════════════════════════════════════════════════════════
+function buildUnitPalette(affil) {
+  const container = document.getElementById('unit-palette');
   container.innerHTML = '';
 
-  SYMBOL_DEFS.forEach(def => {
+  UNIT_DEFS.forEach(def => {
     if (def.cat) {
       const el = document.createElement('div');
       el.className = 'cat-label';
@@ -288,16 +391,12 @@ function buildPalette(affil) {
 
     const sidc = def.sidc.replace('$', affil);
     let svgHtml = '<svg width="36" height="36"></svg>';
-    try {
-      svgHtml = new ms.Symbol(sidc, { size: 36 }).asSVG();
-    } catch (_) {}
+    try { svgHtml = new ms.Symbol(sidc, { size: 36 }).asSVG(); } catch (_) {}
 
     const item = document.createElement('div');
     item.className = 'sym-item';
     item.draggable = true;
-    item.dataset.sidc  = sidc;
-    item.dataset.label = def.label;
-    item.innerHTML = `<div class="sym-icon">${svgHtml}</div><span class="sym-name">${def.label}</span>`;
+    item.innerHTML = `<div class="item-icon">${svgHtml}</div><span class="item-name">${def.label}</span>`;
 
     item.addEventListener('dragstart', e => {
       dragSidc  = sidc;
@@ -305,13 +404,9 @@ function buildPalette(affil) {
       item.classList.add('dragging');
       document.getElementById('drop-zone').classList.add('active');
       e.dataTransfer.effectAllowed = 'copy';
-      // Use the symbol SVG as the drag image
       const svgEl = item.querySelector('svg');
-      if (svgEl) {
-        e.dataTransfer.setDragImage(svgEl,
-          svgEl.width.baseVal.value / 2,
-          svgEl.height.baseVal.value / 2);
-      }
+      if (svgEl) e.dataTransfer.setDragImage(svgEl,
+        svgEl.width.baseVal.value / 2, svgEl.height.baseVal.value / 2);
     });
 
     item.addEventListener('dragend', () => {
@@ -323,156 +418,546 @@ function buildPalette(affil) {
   });
 }
 
-// ────────────────────────────────────────────────────────────────
-// Coordinate conversion: client pixel → LatLng
-// ────────────────────────────────────────────────────────────────
-function clientXYtoLatLng(clientX, clientY) {
-  const mapDiv   = map.getDiv();
-  const rect     = mapDiv.getBoundingClientRect();
-  const x        = clientX - rect.left;
-  const y        = clientY - rect.top;
-  const proj     = map.getProjection();
-  const center   = proj.fromLatLngToPoint(map.getCenter());
-  const scale    = Math.pow(2, map.getZoom());
-  const worldPt  = new google.maps.Point(
-    center.x + (x - mapDiv.offsetWidth  / 2) / scale,
-    center.y + (y - mapDiv.offsetHeight / 2) / scale
-  );
-  return proj.fromPointToLatLng(worldPt);
+// ═══════════════════════════════════════════════════════════════
+// TACTICAL GRAPHIC PALETTE
+// ═══════════════════════════════════════════════════════════════
+function tgPaletteIcon(def, affil) {
+  const c = def.forceColor || AFFIL_COLOR[affil];
+
+  if (def.type === 'point') {
+    const sidc = (def.sidc || '').replace('$', affil);
+    try {
+      const svg = new ms.Symbol(sidc, { size: 34 }).asSVG();
+      if (svg && svg.includes('<path')) return svg;
+    } catch (_) {}
+    return `<svg width="34" height="34" viewBox="0 0 34 34">
+      <circle cx="17" cy="17" r="13" stroke="${c}" stroke-width="2" fill="none"/>
+      <text x="17" y="21" font-size="9" fill="${c}" text-anchor="middle" font-weight="700">${def.abbr}</text>
+    </svg>`;
+  }
+
+  if (def.type === 'line') {
+    const dash = def.dash ? `stroke-dasharray="${def.dash.join(',')}"` : '';
+    const x2   = def.arrow ? 30 : 42;
+    return `<svg width="46" height="22" viewBox="0 0 46 22">
+      <line x1="2" y1="11" x2="${x2}" y2="11" stroke="${c}" stroke-width="2.5" ${dash}/>
+      ${def.arrow ? `<polygon points="45,11 31,6 31,16" fill="${c}"/>` : ''}
+      ${def.abbr ? `<text x="23" y="9" font-size="7" fill="${c}" text-anchor="middle" font-weight="700">${def.abbr}</text>` : ''}
+    </svg>`;
+  }
+
+  if (def.type === 'area') {
+    const dash = def.dash ? `stroke-dasharray="${def.dash.join(',')}"` : '';
+    return `<svg width="46" height="30" viewBox="0 0 46 30">
+      <polygon points="4,27 23,3 42,27" stroke="${c}" stroke-width="2" ${dash} fill="${c}" fill-opacity="0.2"/>
+      ${def.abbr ? `<text x="23" y="22" font-size="7" fill="${c}" text-anchor="middle" font-weight="700">${def.abbr}</text>` : ''}
+    </svg>`;
+  }
+  return '<svg width="34" height="34"></svg>';
 }
 
-// ────────────────────────────────────────────────────────────────
-// Place a symbol marker on the map
-// ────────────────────────────────────────────────────────────────
-function placeMarker(latLng, sidc, label) {
+function buildTGPalette(affil) {
+  const container = document.getElementById('tg-palette');
+  container.innerHTML = '';
+  selectedTGEl = null;
+  cancelDrawing();
+
+  TG_DEFS.forEach(def => {
+    if (def.cat) {
+      const el = document.createElement('div');
+      el.className = 'cat-label';
+      el.textContent = def.cat;
+      container.appendChild(el);
+      return;
+    }
+
+    const badge   = { point: ['PT','badge-pt'], line: ['LN','badge-ln'], area: ['AR','badge-ar'] }[def.type];
+    const item    = document.createElement('div');
+    item.className = 'tg-item';
+    item.innerHTML = `
+      <div class="item-icon">${tgPaletteIcon(def, affil)}</div>
+      <span class="item-name">${def.label}</span>
+      <span class="type-badge ${badge[1]}">${badge[0]}</span>`;
+
+    item.addEventListener('click', () => {
+      if (selectedTGEl === item) { cancelDrawing(); return; }
+      if (selectedTGEl) selectedTGEl.classList.remove('selected');
+      selectedTGEl = item;
+      item.classList.add('selected');
+      startDrawing(def, affil);
+    });
+
+    container.appendChild(item);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRAWING ENGINE
+// ═══════════════════════════════════════════════════════════════
+function startDrawing(def, affil) {
+  cancelDrawing();
+  drw.active = true;
+  drw.def    = def;
+  drw.affil  = affil;
+  drw.points = [];
+
+  const bar = document.getElementById('drawing-bar');
+  document.getElementById('drawing-title').textContent = def.label;
+  map.setOptions({ draggableCursor: 'crosshair' });
+
+  if (def.type === 'point') {
+    document.getElementById('drawing-hint').textContent = 'Click the map to place';
+    document.getElementById('btn-undo').style.display   = 'none';
+    document.getElementById('btn-finish').style.display = 'none';
+    bar.classList.add('active');
+    drw.listeners.push(map.addListener('click', e => {
+      drw.listeners.forEach(l => google.maps.event.removeListener(l));
+      drw.listeners.length = 0;
+      const latLng = e.latLng;
+      drw.active = false; drw.def = null; drw.points = [];
+      bar.classList.remove('active');
+      map.setOptions({ draggableCursor: null });
+      openNameModal(def.label, def.abbr, name => placeTGPoint(latLng, def, affil, name));
+    }));
+
+  } else {
+    const minPts = def.type === 'line' ? 2 : 3;
+    document.getElementById('drawing-hint').textContent =
+      `Click to add points · Double-click to finish (min ${minPts}) · Esc to cancel`;
+    document.getElementById('btn-undo').style.display   = '';
+    document.getElementById('btn-finish').style.display = '';
+    bar.classList.add('active');
+
+    const color = def.forceColor || AFFIL_COLOR[affil];
+
+    drw.listeners.push(map.addListener('click',     e => addDrawPoint(e.latLng, color, def)));
+    drw.listeners.push(map.addListener('mousemove', e => updatePreview(e.latLng, color, def)));
+    drw.listeners.push(map.addListener('dblclick',  e => {
+      // dblclick fires after two clicks – undo the extra click vertex
+      if (drw.points.length > 0) {
+        drw.dotMarkers[drw.dotMarkers.length - 1].setMap(null);
+        drw.dotMarkers.pop();
+        drw.points.pop();
+      }
+      commitDrawing();
+    }));
+  }
+}
+
+function addDrawPoint(latLng, color, def) {
+  drw.points.push(latLng);
+  const dot = new google.maps.Marker({
+    position: latLng, map,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 4,
+            fillColor: color, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 1 },
+    clickable: false, zIndex: 1000,
+  });
+  drw.dotMarkers.push(dot);
+}
+
+function updatePreview(cursorLatLng, color, def) {
+  if (drw.points.length === 0) return;
+  const path = [...drw.points, cursorLatLng];
+
+  if (!drw.preview) {
+    drw.preview = new google.maps.Polyline({
+      map, path, strokeColor: color, strokeWeight: def.weight || 2,
+      strokeOpacity: 0.65, clickable: false, geodesic: true, zIndex: 50,
+    });
+  } else {
+    drw.preview.setPath(path);
+  }
+
+  // Closing segment for areas
+  if (def.type === 'area' && drw.points.length >= 2) {
+    const closePath = [cursorLatLng, drw.points[0]];
+    if (!drw.previewClose) {
+      drw.previewClose = new google.maps.Polyline({
+        map, path: closePath, strokeColor: color, strokeWeight: 1,
+        strokeOpacity: 0.3, clickable: false, geodesic: true, zIndex: 50,
+      });
+    } else {
+      drw.previewClose.setPath(closePath);
+    }
+  }
+}
+
+function clearDrawOverlays() {
+  if (drw.preview)      { drw.preview.setMap(null);      drw.preview = null; }
+  if (drw.previewClose) { drw.previewClose.setMap(null); drw.previewClose = null; }
+  drw.dotMarkers.forEach(m => m.setMap(null));
+  drw.dotMarkers.length = 0;
+  drw.listeners.forEach(l => google.maps.event.removeListener(l));
+  drw.listeners.length = 0;
+}
+
+function cancelDrawing() {
+  clearDrawOverlays();
+  drw.active = false; drw.def = null; drw.points = [];
+  document.getElementById('drawing-bar').classList.remove('active');
+  if (map) map.setOptions({ draggableCursor: null });
+  if (selectedTGEl) { selectedTGEl.classList.remove('selected'); selectedTGEl = null; }
+}
+
+function commitDrawing() {
+  const def   = drw.def;
+  const affil = drw.affil;
+  const color = def.forceColor || AFFIL_COLOR[affil];
+  const minPts = def.type === 'line' ? 2 : 3;
+
+  if (drw.points.length < minPts) { cancelDrawing(); return; }
+
+  const points = [...drw.points];
+  clearDrawOverlays();
+  drw.active = false; drw.def = null; drw.points = [];
+  document.getElementById('drawing-bar').classList.remove('active');
+  map.setOptions({ draggableCursor: null });
+  if (selectedTGEl) { selectedTGEl.classList.remove('selected'); selectedTGEl = null; }
+
+  openNameModal(def.label, def.abbr, name => {
+    if (def.type === 'line') placeTGLine(points, def, color, name);
+    else                     placeTGArea(points, def, color, name);
+  });
+}
+
+// undo last vertex
+document.getElementById('btn-undo').addEventListener('click', () => {
+  if (drw.points.length === 0) return;
+  drw.dotMarkers[drw.dotMarkers.length - 1].setMap(null);
+  drw.dotMarkers.pop();
+  drw.points.pop();
+  if (drw.preview) {
+    if (drw.points.length === 0) { drw.preview.setMap(null); drw.preview = null; }
+    else drw.preview.setPath(drw.points);
+  }
+});
+
+document.getElementById('btn-finish').addEventListener('click', commitDrawing);
+document.getElementById('btn-cancel').addEventListener('click', cancelDrawing);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cancelDrawing(); });
+
+// ═══════════════════════════════════════════════════════════════
+// PLACEMENT: POINT TG
+// ═══════════════════════════════════════════════════════════════
+function placeTGPoint(latLng, def, affil, name) {
+  const uid   = ++uidCounter;
+  const color = def.forceColor || AFFIL_COLOR[affil];
+  const sidc  = (def.sidc || '').replace('$', affil);
+  const label = name || def.abbr || def.label;
+
+  let iconCfg;
+  try {
+    const sym = new ms.Symbol(sidc, { size: 40 });
+    const svg = sym.asSVG();
+    if (svg && svg.includes('<path')) {
+      const a = sym.getAnchor();
+      iconCfg = { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+                  anchor: new google.maps.Point(a.x, a.y) };
+    }
+  } catch (_) {}
+
+  if (!iconCfg) {
+    iconCfg = {
+      path: google.maps.SymbolPath.CIRCLE, scale: 11,
+      fillColor: color, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2,
+      labelOrigin: new google.maps.Point(0, 0),
+    };
+  }
+
+  const marker = new google.maps.Marker({
+    position: latLng, map, icon: iconCfg,
+    label: iconCfg.url ? undefined : { text: def.abbr, color: '#fff', fontSize: '8px', fontWeight: '700' },
+    title: label, draggable: true, zIndex: uid,
+  });
+
+  const iw = new google.maps.InfoWindow();
+  function refreshIW() {
+    const p = marker.getPosition();
+    iw.setContent(infoHtml(uid, label, def.label, p.lat().toFixed(6), p.lng().toFixed(6), '__tgRemove'));
+  }
+  marker.addListener('click',   () => { refreshIW(); iw.open(map, marker); });
+  marker.addListener('dragend', refreshIW);
+  refreshIW();
+  placedTGs.push({ uid, marker, iw });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PLACEMENT: LINE TG
+// ═══════════════════════════════════════════════════════════════
+function buildPolyIcons(def, color) {
+  const icons = [];
+  if (def.dash) {
+    icons.push({
+      icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, strokeColor: color,
+              scale: (def.weight || 2) + 1 },
+      offset: '0',
+      repeat: `${(def.dash[0] + def.dash[1]) * 2}px`,
+    });
+  }
+  if (def.arrow) {
+    icons.push({
+      icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
+              scale: 4, strokeColor: color, strokeWeight: 2, strokeOpacity: 1 },
+      offset: '100%',
+    });
+  }
+  return icons;
+}
+
+function midLatLng(points) {
+  const m = Math.floor(points.length / 2);
+  if (points.length % 2 === 1) return { lat: points[m].lat(), lng: points[m].lng() };
+  return { lat: (points[m-1].lat() + points[m].lat()) / 2,
+           lng: (points[m-1].lng() + points[m].lng()) / 2 };
+}
+
+function centroidLatLng(points) {
+  return { lat: points.reduce((s,p) => s + p.lat(), 0) / points.length,
+           lng: points.reduce((s,p) => s + p.lng(), 0) / points.length };
+}
+
+function labelMarker(position, text, color, zIndex) {
+  return new google.maps.Marker({
+    position, map,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
+    label: { text, color, fontSize: '12px', fontWeight: '700', fontFamily: 'Arial,sans-serif' },
+    clickable: false, zIndex,
+  });
+}
+
+function placeTGLine(points, def, color, name) {
+  const uid  = ++uidCounter;
+  const disp = name || def.abbr || def.label;
+  const icons = buildPolyIcons(def, color);
+
+  const polyline = new google.maps.Polyline({
+    map, path: points, geodesic: true,
+    strokeColor: def.dash ? 'transparent' : color,
+    strokeOpacity: def.dash ? 0 : 1,
+    strokeWeight: def.weight || 2,
+    icons, zIndex: uid,
+  });
+
+  const lm  = labelMarker(midLatLng(points), disp, color, uid + 1);
+  const iw  = new google.maps.InfoWindow();
+  const iwContent = infoHtml(uid, disp, def.label, null, null, '__tgRemove');
+  polyline.addListener('click', e => { iw.setContent(iwContent); iw.setPosition(e.latLng); iw.open(map); });
+
+  placedTGs.push({ uid, overlays: [polyline, lm], iw });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PLACEMENT: AREA TG
+// ═══════════════════════════════════════════════════════════════
+function placeTGArea(points, def, color, name) {
+  const uid  = ++uidCounter;
+  const disp = name || def.abbr || def.label;
+
+  const polygon = new google.maps.Polygon({
+    map, paths: points, geodesic: true,
+    strokeColor: def.dash ? 'transparent' : color,
+    strokeOpacity: def.dash ? 0 : 0.9,
+    strokeWeight: 2, fillColor: color, fillOpacity: 0.1, zIndex: uid,
+  });
+
+  const overlays = [polygon];
+
+  // Dashed border: separate closed polyline
+  if (def.dash) {
+    const border = new google.maps.Polyline({
+      map, path: [...points, points[0]], geodesic: true,
+      strokeColor: 'transparent', strokeOpacity: 0, strokeWeight: 2,
+      icons: buildPolyIcons(def, color), zIndex: uid,
+    });
+    overlays.push(border);
+  }
+
+  const lm = labelMarker(centroidLatLng(points), disp, color, uid + 1);
+  overlays.push(lm);
+
+  const iw = new google.maps.InfoWindow();
+  const iwContent = infoHtml(uid, disp, def.label, null, null, '__tgRemove');
+  polygon.addListener('click', e => { iw.setContent(iwContent); iw.setPosition(e.latLng); iw.open(map); });
+
+  placedTGs.push({ uid, overlays, iw });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REMOVE HANDLERS
+// ═══════════════════════════════════════════════════════════════
+function infoHtml(uid, title, subtitle, lat, lng, removeFn) {
+  const coords = lat != null
+    ? `<div style="font-size:11px;margin-bottom:1px">Lat: ${lat}</div>
+       <div style="font-size:11px;margin-bottom:9px">Lng: ${lng}</div>`
+    : '<div style="margin-bottom:9px"></div>';
+  return `<div style="font-family:Arial,sans-serif;min-width:160px;padding:2px 0">
+    <div style="font-weight:700;font-size:13px;margin-bottom:3px">${title}</div>
+    <div style="font-size:10px;color:#888;margin-bottom:7px">${subtitle}</div>
+    ${coords}
+    <button onclick="window.${removeFn}(${uid})"
+      style="padding:4px 12px;background:#d73a49;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600">
+      Remove
+    </button></div>`;
+}
+
+window.__milRemove = function(uid) {
+  const idx = placedUnits.findIndex(m => m.uid === uid);
+  if (idx < 0) return;
+  placedUnits[idx].iw.close();
+  placedUnits[idx].marker.setMap(null);
+  placedUnits.splice(idx, 1);
+};
+
+window.__tgRemove = function(uid) {
+  const idx = placedTGs.findIndex(t => t.uid === uid);
+  if (idx < 0) return;
+  placedTGs[idx].iw.close();
+  if (placedTGs[idx].marker)   placedTGs[idx].marker.setMap(null);
+  if (placedTGs[idx].overlays) placedTGs[idx].overlays.forEach(o => o.setMap(null));
+  placedTGs.splice(idx, 1);
+};
+
+// ═══════════════════════════════════════════════════════════════
+// NAME MODAL
+// ═══════════════════════════════════════════════════════════════
+let nameModalCb = null;
+
+function openNameModal(title, defaultVal, cb) {
+  nameModalCb = cb;
+  document.getElementById('name-modal-title').textContent = 'Name this ' + title;
+  const inp = document.getElementById('name-input');
+  inp.value = defaultVal || '';
+  document.getElementById('name-modal').classList.add('open');
+  setTimeout(() => { inp.focus(); inp.select(); }, 40);
+}
+
+document.getElementById('name-ok').addEventListener('click', () => {
+  const v = document.getElementById('name-input').value.trim();
+  document.getElementById('name-modal').classList.remove('open');
+  if (nameModalCb) { nameModalCb(v); nameModalCb = null; }
+});
+
+document.getElementById('name-skip').addEventListener('click', () => {
+  document.getElementById('name-modal').classList.remove('open');
+  if (nameModalCb) { nameModalCb(''); nameModalCb = null; }
+});
+
+document.getElementById('name-input').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter')  document.getElementById('name-ok').click();
+  if (e.key === 'Escape') document.getElementById('name-skip').click();
+});
+
+// ═══════════════════════════════════════════════════════════════
+// UNIT DRAG-DROP
+// ═══════════════════════════════════════════════════════════════
+function clientXYtoLatLng(clientX, clientY) {
+  const d = map.getDiv(), r = d.getBoundingClientRect();
+  const proj = map.getProjection(), scale = Math.pow(2, map.getZoom());
+  const c = proj.fromLatLngToPoint(map.getCenter());
+  return proj.fromPointToLatLng(new google.maps.Point(
+    c.x + (clientX - r.left  - d.offsetWidth  / 2) / scale,
+    c.y + (clientY - r.top   - d.offsetHeight / 2) / scale
+  ));
+}
+
+function placeUnitMarker(latLng, sidc, label) {
   const uid = ++uidCounter;
   const sym = new ms.Symbol(sidc, { size: 44 });
   const anc = sym.getAnchor();
-
   const marker = new google.maps.Marker({
-    position:  latLng,
-    map:       map,
-    icon: {
-      url:    'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(sym.asSVG()),
-      anchor: new google.maps.Point(anc.x, anc.y),
-    },
-    title:     label,
-    draggable: true,
-    zIndex:    uid,
+    position: latLng, map,
+    icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(sym.asSVG()),
+            anchor: new google.maps.Point(anc.x, anc.y) },
+    title: label, draggable: true, zIndex: uid,
   });
-
-  const infoWin = new google.maps.InfoWindow();
-
-  function refreshInfo() {
-    const pos = marker.getPosition();
-    infoWin.setContent(`
-      <div style="font-family:Arial,sans-serif;min-width:170px;padding:2px 0">
-        <div style="font-weight:700;font-size:13px;margin-bottom:3px">${label}</div>
-        <div style="font-size:10px;color:#888;margin-bottom:7px;font-family:monospace">${sidc}</div>
-        <div style="font-size:11px;margin-bottom:1px">Lat: ${pos.lat().toFixed(6)}</div>
-        <div style="font-size:11px;margin-bottom:9px">Lng: ${pos.lng().toFixed(6)}</div>
-        <button onclick="window.__milRemove(${uid})"
-          style="padding:4px 12px;background:#d73a49;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600">
-          Remove
-        </button>
-      </div>
-    `);
+  const iw = new google.maps.InfoWindow();
+  function refreshIW() {
+    const p = marker.getPosition();
+    iw.setContent(infoHtml(uid, label, sidc, p.lat().toFixed(6), p.lng().toFixed(6), '__milRemove'));
   }
-
-  marker.addListener('click',    () => { refreshInfo(); infoWin.open(map, marker); });
-  marker.addListener('dragend',  refreshInfo);
-
-  refreshInfo();
-  placed.push({ uid, marker, infoWin });
+  marker.addListener('click',   () => { refreshIW(); iw.open(map, marker); });
+  marker.addListener('dragend', refreshIW);
+  refreshIW();
+  placedUnits.push({ uid, marker, iw });
 }
 
-// Remove marker by uid (called from InfoWindow button)
-window.__milRemove = function(uid) {
-  const idx = placed.findIndex(m => m.uid === uid);
-  if (idx < 0) return;
-  placed[idx].infoWin.close();
-  placed[idx].marker.setMap(null);
-  placed.splice(idx, 1);
-};
-
-// ────────────────────────────────────────────────────────────────
-// Drop zone – sits over the map and captures drag events
-// The overlay only becomes visible/interactive during a drag,
-// which prevents Google Maps from swallowing the drop event.
-// ────────────────────────────────────────────────────────────────
 const dropZone = document.getElementById('drop-zone');
-
-dropZone.addEventListener('dragover', e => {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'copy';
-});
-
+dropZone.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
 dropZone.addEventListener('drop', e => {
   e.preventDefault();
   dropZone.classList.remove('active');
   if (!dragSidc || !map) return;
-  placeMarker(clientXYtoLatLng(e.clientX, e.clientY), dragSidc, dragLabel);
-  dragSidc  = null;
-  dragLabel = null;
+  placeUnitMarker(clientXYtoLatLng(e.clientX, e.clientY), dragSidc, dragLabel);
+  dragSidc = dragLabel = null;
 });
 
-// ────────────────────────────────────────────────────────────────
-// Tab switching
-// ────────────────────────────────────────────────────────────────
-document.querySelectorAll('.tab-btn').forEach(btn => {
+// ═══════════════════════════════════════════════════════════════
+// MODE / TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('.mode-tab').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    currentAffil = btn.dataset.affil;
-    buildPalette(currentAffil);
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(btn.dataset.mode + '-panel').classList.add('active');
+    if (btn.dataset.mode === 'units') cancelDrawing();
   });
 });
 
-// ────────────────────────────────────────────────────────────────
-// Google Maps initialisation (called by the script tag below)
-// ────────────────────────────────────────────────────────────────
+document.querySelectorAll('#unit-affil-tabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#unit-affil-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    unitAffil = btn.dataset.affil;
+    buildUnitPalette(unitAffil);
+  });
+});
+
+document.querySelectorAll('#tg-affil-tabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#tg-affil-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    tgAffil = btn.dataset.affil;
+    buildTGPalette(tgAffil);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// GOOGLE MAPS INIT
+// ═══════════════════════════════════════════════════════════════
 window.initMap = function () {
   map = new google.maps.Map(document.getElementById('map'), {
-    center:           { lat: 36.85, lng: -76.29 },
-    zoom:             11,
-    mapTypeId:        'terrain',
-    gestureHandling:  'greedy',
-    mapTypeControl:   true,
-    streetViewControl: false,
-    fullscreenControl: true,
+    center: { lat: 36.85, lng: -76.29 }, zoom: 11,
+    mapTypeId: 'terrain', gestureHandling: 'greedy',
+    mapTypeControl: true, streetViewControl: false, fullscreenControl: true,
     mapTypeControlOptions: {
       style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
       position: google.maps.ControlPosition.TOP_RIGHT,
     },
   });
-
-  buildPalette('F');
+  buildUnitPalette('F');
+  buildTGPalette('F');
 };
 
-// Show a notice if the API key is still the placeholder
-(function checkKey() {
-  const script = document.currentScript ||
-    [...document.querySelectorAll('script[src*="maps.googleapis"]')].pop();
-  const src = script ? script.src : '';
-  if (!src || src.includes('YOUR_GOOGLE_MAPS_API_KEY') || src.includes('key=&')) {
-    const notice = document.createElement('div');
-    notice.id = 'api-key-notice';
-    notice.innerHTML = `
-      <strong>Google Maps API key required.</strong><br>
-      Replace <code>YOUR_GOOGLE_MAPS_API_KEY</code> in <code>index.html</code>
-      (last &lt;script&gt; tag) with your key from
-      <a href="https://console.cloud.google.com/google/maps-apis" target="_blank"
-         style="color:#ffd">Google Cloud Console</a>.
-    `;
-    document.getElementById('map-wrap').appendChild(notice);
+// API key check
+(function () {
+  const s = document.querySelector('script[src*="maps.googleapis"]');
+  if (!s || s.src.includes('YOUR_GOOGLE_MAPS_API_KEY') || s.src.includes('key=&')) {
+    const n = document.createElement('div');
+    n.id = 'api-key-notice';
+    n.innerHTML = `<strong>Google Maps API key required.</strong><br>
+      Replace <code>YOUR_GOOGLE_MAPS_API_KEY</code> in <code>index.html</code> with your key from
+      <a href="https://console.cloud.google.com/google/maps-apis" target="_blank" style="color:#ffd">
+      Google Cloud Console</a>.`;
+    document.getElementById('map-wrap').appendChild(n);
   }
 })();
 </script>
 
 <!--
-  Replace YOUR_GOOGLE_MAPS_API_KEY with your key from:
-  https://console.cloud.google.com/google/maps-apis/overview
-  Required APIs: Maps JavaScript API
+  Replace YOUR_GOOGLE_MAPS_API_KEY below with your key.
+  Required API: Maps JavaScript API
 -->
 <script async defer
   src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap">
