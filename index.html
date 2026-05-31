@@ -1,1136 +1,835 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ARMY AI PLANNING ASSISTANT — MDMP SUPPORT TOOL</title>
-  <style>
-    /* ─── RESET & BASE ─────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg:        #0d1117;
-      --panel:     #161b22;
-      --border:    #21262d;
-      --accent:    #4d7c0f;
-      --accent2:   #65a30d;
-      --amber:     #d97706;
-      --red:       #b91c1c;
-      --blue:      #1d4ed8;
-      --muted:     #6b7280;
-      --text:      #e2e8f0;
-      --subtext:   #94a3b8;
-      --highlight: #1e3a1e;
-      --highlight2:#1c2a3a;
-      --font:      'Courier New', Courier, monospace;
-    }
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; overflow: hidden; }
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>ARMY AI PLANNER — OP IRON SENTINEL</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--glass:rgba(7,9,14,.92);--border:rgba(255,255,255,.07);
+  --green:#10b981;--blue:#3b82f6;--red:#ef4444;--amber:#f59e0b;
+  --text:#f0f4f8;--sub:#94a3b8;--muted:#475569;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;overflow:hidden}
 
-    /* ─── LAYOUT ───────────────────────────────────────────────────────── */
-    #app { display: grid; grid-template-rows: 48px 1fr; grid-template-columns: 220px 1fr 320px; height: 100vh; }
-    #topbar { grid-column: 1 / -1; background: #0a0f14; border-bottom: 2px solid var(--accent); display: flex; align-items: center; gap: 16px; padding: 0 16px; }
-    #sidebar { background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
-    #main    { overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-    #aipanel { background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+/* ── LAYOUT ─────────────────────────────────────────── */
+#app{display:grid;grid-template-rows:52px 1fr 108px;height:100vh}
+#workspace{display:grid;grid-template-columns:164px 1fr 300px;overflow:hidden;position:relative}
 
-    /* ─── TOPBAR ───────────────────────────────────────────────────────── */
-    .topbar-logo { font-size: 18px; font-weight: bold; color: var(--accent2); letter-spacing: 2px; white-space: nowrap; }
-    .topbar-divider { width: 1px; height: 28px; background: var(--border); }
-    .topbar-meta { display: flex; flex-direction: column; }
-    .topbar-meta .label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-    .topbar-meta .value { font-size: 11px; color: var(--subtext); }
-    .topbar-spacer { flex: 1; }
-    .status-pill { padding: 3px 10px; border-radius: 2px; font-size: 10px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
-    .status-pill.active  { background: var(--accent); color: #fff; }
-    .status-pill.warning { background: var(--amber); color: #000; }
-    .status-pill.danger  { background: var(--red); color: #fff; }
-    .clock { color: var(--accent2); font-size: 14px; font-weight: bold; letter-spacing: 2px; }
+/* ── TOPBAR ─────────────────────────────────────────── */
+#topbar{
+  display:flex;align-items:center;gap:20px;padding:0 20px;
+  background:var(--glass);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(16px);z-index:1000
+}
+.op-dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px var(--green);animation:glow 2s infinite}
+@keyframes glow{0%,100%{opacity:1}50%{opacity:.35}}
+.op-name{font-size:14px;font-weight:700;letter-spacing:.06em}
+.op-class{font-size:9px;color:var(--red);letter-spacing:.12em;font-weight:700;margin-top:1px}
+.modes{display:flex;gap:2px;background:rgba(255,255,255,.04);padding:4px;
+  border-radius:8px;border:1px solid var(--border);margin-left:12px}
+.mode-btn{
+  padding:5px 18px;border:none;background:none;color:var(--sub);
+  cursor:pointer;border-radius:6px;font-size:11px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;transition:all .2s;font-family:inherit
+}
+.mode-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.mode-btn.active{background:var(--green);color:#000;box-shadow:0 0 16px rgba(16,185,129,.35)}
+.topbar-r{margin-left:auto;display:flex;align-items:center;gap:16px}
+.clock{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums;
+  font-family:'Courier New',monospace;letter-spacing:.05em}
+.cl-badge{font-size:9px;color:var(--red);border:1px solid rgba(239,68,68,.4);
+  padding:2px 8px;border-radius:4px;letter-spacing:.1em;font-weight:700}
 
-    /* ─── SIDEBAR ──────────────────────────────────────────────────────── */
-    .sidebar-section { padding: 10px 12px 4px; font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); border-bottom: 1px solid var(--border); }
-    .mdmp-step { padding: 10px 14px; cursor: pointer; border-left: 3px solid transparent; transition: all .15s; display: flex; align-items: center; gap: 10px; }
-    .mdmp-step:hover { background: var(--highlight); }
-    .mdmp-step.active { background: var(--highlight); border-left-color: var(--accent2); }
-    .mdmp-step.done   { border-left-color: var(--muted); opacity: .7; }
-    .step-num { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--muted); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--muted); flex-shrink: 0; }
-    .mdmp-step.active .step-num { border-color: var(--accent2); color: var(--accent2); background: rgba(101,163,13,.12); }
-    .mdmp-step.done   .step-num { background: var(--muted); color: #000; border-color: var(--muted); }
-    .step-label { font-size: 11px; line-height: 1.3; }
-    .step-sublabel { font-size: 9px; color: var(--muted); margin-top: 1px; }
-    .sidebar-tools { margin-top: auto; border-top: 1px solid var(--border); }
-    .tool-btn { width: 100%; padding: 9px 14px; text-align: left; background: none; border: none; color: var(--subtext); cursor: pointer; font-family: var(--font); font-size: 11px; display: flex; align-items: center; gap: 8px; transition: all .15s; }
-    .tool-btn:hover { background: var(--highlight2); color: var(--text); }
-    .tool-btn .icon { font-size: 13px; }
+/* ── LEFT PANEL ─────────────────────────────────────── */
+#left-panel{
+  background:var(--glass);border-right:1px solid var(--border);
+  backdrop-filter:blur(12px);display:flex;flex-direction:column;overflow:hidden
+}
+.lp-head{padding:10px 12px 6px;font-size:9px;text-transform:uppercase;
+  letter-spacing:.14em;color:var(--muted);border-bottom:1px solid var(--border)}
+#lp-body{flex:1;overflow-y:auto;padding:10px 8px}
 
-    /* ─── MAIN CONTENT ─────────────────────────────────────────────────── */
-    .page { display: none; flex-direction: column; gap: 16px; }
-    .page.active { display: flex; }
-    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-    .page-title { font-size: 20px; font-weight: bold; color: var(--accent2); letter-spacing: 1px; }
-    .page-subtitle { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .ai-assist-btn { padding: 6px 14px; background: var(--accent); border: none; color: #fff; cursor: pointer; font-family: var(--font); font-size: 11px; border-radius: 2px; white-space: nowrap; transition: background .15s; }
-    .ai-assist-btn:hover { background: var(--accent2); }
+/* unit card */
+.ucard{
+  border:1.5px solid rgba(59,130,246,.45);border-radius:7px;
+  padding:8px 8px 6px;margin-bottom:7px;cursor:grab;
+  background:rgba(59,130,246,.07);user-select:none;transition:all .2s
+}
+.ucard:hover{border-color:var(--blue);background:rgba(59,130,246,.14);transform:translateX(3px)}
+.ucard:active{cursor:grabbing}
+.ucard.placed{opacity:.3;cursor:default;pointer-events:none}
+.nato{width:100%;margin-bottom:5px}
+.nato svg{width:100%;height:auto;display:block}
+.ucard-name{font-size:11px;font-weight:700;text-align:center;color:var(--text)}
+.ucard-sub{font-size:9px;color:var(--sub);text-align:center;margin-top:2px}
 
-    /* Cards */
-    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-    .card-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,.02); }
-    .card-title { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: var(--subtext); }
-    .card-body { padding: 14px; }
-    .card-actions { display: flex; gap: 8px; }
-    .btn-sm { padding: 4px 10px; font-size: 10px; font-family: var(--font); cursor: pointer; border-radius: 2px; border: 1px solid var(--border); background: none; color: var(--subtext); transition: all .15s; }
-    .btn-sm:hover { border-color: var(--accent2); color: var(--accent2); }
-    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+/* intel / dp list items */
+.list-item{
+  display:flex;gap:8px;align-items:flex-start;padding:8px;border-radius:7px;
+  border:1px solid var(--border);margin-bottom:6px;
+  background:rgba(255,255,255,.02);cursor:pointer;transition:all .15s
+}
+.list-item:hover{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.05)}
+.list-item-ico{font-size:14px;line-height:1;flex-shrink:0;margin-top:1px}
+.list-item-name{font-size:11px;font-weight:600;color:var(--text)}
+.list-item-sub{font-size:9px;color:var(--sub);margin-top:2px}
 
-    /* Grid layouts */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-    .grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+/* ── MAP ────────────────────────────────────────────── */
+#map-wrap{position:relative}
+#map{width:100%;height:100%}
+.leaflet-container{background:#0d1219}
+.leaflet-tile-pane{filter:saturate(.65) brightness(.72) contrast(1.05)}
+.leaflet-control-zoom{border:1px solid var(--border)!important;border-radius:8px!important;overflow:hidden;box-shadow:none!important}
+.leaflet-control-zoom a{background:var(--glass)!important;color:var(--text)!important;border:none!important;backdrop-filter:blur(8px)}
+.leaflet-control-zoom a:hover{background:rgba(255,255,255,.1)!important}
+.leaflet-popup-content-wrapper{background:rgba(7,9,14,.95);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:10px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,.7)}
+.leaflet-popup-tip{background:rgba(7,9,14,.95)}
+.leaflet-popup-content{margin:12px 16px;font-size:12px}
+.leaflet-attribution-flag{display:none!important}
+.leaflet-control-attribution{background:rgba(0,0,0,.5)!important;color:var(--muted)!important;font-size:9px!important;border-radius:4px!important}
 
-    /* Form fields */
-    .field { margin-bottom: 12px; }
-    .field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-    .field input, .field textarea, .field select {
-      width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
-      font-family: var(--font); font-size: 12px; padding: 7px 10px; border-radius: 2px;
-      transition: border-color .15s; outline: none; resize: vertical;
-    }
-    .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent2); }
-    .field textarea { min-height: 72px; }
+/* map drop glow */
+#map-wrap.drop-active::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:500;
+  box-shadow:inset 0 0 40px rgba(59,130,246,.25);
+  border:2px solid rgba(59,130,246,.4)
+}
 
-    /* Tables */
-    table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    th { padding: 7px 10px; text-align: left; background: rgba(255,255,255,.03); color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
-    td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,.04); }
-    tr:hover td { background: rgba(255,255,255,.02); }
+/* map legend */
+#legend{
+  position:absolute;bottom:16px;left:12px;z-index:500;
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:10px;backdrop-filter:blur(12px);padding:10px 14px
+}
+.leg-row{display:flex;align-items:center;gap:8px;padding:2px 0;font-size:10px;color:var(--sub)}
+.leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.leg-line{width:18px;height:2px;flex-shrink:0}
 
-    /* Tags / badges */
-    .badge { display: inline-block; padding: 2px 7px; border-radius: 2px; font-size: 9px; font-weight: bold; letter-spacing: .5px; text-transform: uppercase; }
-    .badge-green  { background: rgba(77,124,15,.3); color: var(--accent2); border: 1px solid rgba(77,124,15,.5); }
-    .badge-amber  { background: rgba(217,119,6,.2); color: var(--amber); border: 1px solid rgba(217,119,6,.4); }
-    .badge-red    { background: rgba(185,28,28,.2); color: #f87171; border: 1px solid rgba(185,28,28,.4); }
-    .badge-blue   { background: rgba(29,78,216,.2); color: #93c5fd; border: 1px solid rgba(29,78,216,.4); }
-    .badge-gray   { background: rgba(107,114,128,.2); color: var(--muted); border: 1px solid rgba(107,114,128,.3); }
+/* map unit markers */
+.mu{display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.mu-sym{width:34px;height:26px;background:#1d4ed8;border:2px solid #93c5fd;
+  border-radius:3px;display:flex;align-items:center;justify-content:center}
+.mu-sym svg{width:22px;height:16px}
+.mu-lbl{font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.8);
+  padding:1px 5px;margin-top:2px;border-radius:2px;white-space:nowrap;letter-spacing:.04em}
 
-    /* Progress bar */
-    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-    .progress-fill { height: 100%; background: var(--accent2); transition: width .4s; }
+/* pl label */
+.pl-lbl{padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;
+  font-family:'Courier New',monospace;white-space:nowrap;backdrop-filter:blur(4px)}
 
-    /* METT-TC tiles */
-    .mettc-tile { background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 12px; }
-    .mettc-tile .tile-header { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent2); margin-bottom: 8px; display: flex; justify-content: space-between; }
-    .mettc-tile textarea { width: 100%; background: transparent; border: none; color: var(--text); font-family: var(--font); font-size: 11px; resize: none; outline: none; min-height: 80px; }
+/* ── AI PANEL ────────────────────────────────────────── */
+#ai-panel{
+  background:var(--glass);border-left:1px solid var(--border);
+  backdrop-filter:blur(12px);display:flex;flex-direction:column
+}
+.ai-hdr{
+  padding:13px 16px 11px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-shrink:0
+}
+.ai-hdr-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:glow 2s infinite}
+.ai-hdr-title{font-size:12px;font-weight:700;color:var(--text)}
+.ai-hdr-sub{font-size:10px;color:var(--muted);margin-top:1px}
+#ai-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.amsg-role{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px}
+.abubble{padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.65}
+.abubble.ai{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.18);color:var(--text)}
+.abubble.user{background:rgba(59,130,246,.09);border:1px solid rgba(59,130,246,.2);color:var(--text)}
+.abubble.ctx{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);color:var(--amber);font-size:11px}
+.athinking{display:flex;gap:5px;padding:10px 12px}
+.td{width:7px;height:7px;border-radius:50%;background:var(--green);opacity:.4;animation:tb .9s infinite}
+.td:nth-child(2){animation-delay:.15s}.td:nth-child(3){animation-delay:.3s}
+@keyframes tb{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
+.ai-quick{padding:9px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+.aq-btn{
+  padding:7px 11px;background:rgba(255,255,255,.03);border:1px solid var(--border);
+  border-radius:7px;color:var(--sub);cursor:pointer;font-size:11px;
+  text-align:left;transition:all .15s;font-family:inherit
+}
+.aq-btn:hover{border-color:var(--green);color:var(--text);background:rgba(16,185,129,.06)}
+.ai-inp-row{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
+.ai-inp{
+  flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:12px;font-family:inherit;
+  padding:8px 12px;outline:none;resize:none;min-height:36px;max-height:80px;transition:border-color .15s
+}
+.ai-inp:focus{border-color:rgba(16,185,129,.5)}
+.ai-inp::placeholder{color:var(--muted)}
+.ai-send{
+  width:36px;height:36px;border-radius:8px;background:var(--green);
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;flex-shrink:0
+}
+.ai-send:hover{background:#059669}
+.ai-send:disabled{opacity:.4;cursor:not-allowed}
+.ai-send svg{width:15px;height:15px;fill:white}
 
-    /* COA comparison matrix */
-    .matrix-hdr { background: rgba(77,124,15,.15); }
-    .matrix-best { color: var(--accent2); font-weight: bold; }
-    .score-cell { text-align: center; }
-    .total-row td { border-top: 2px solid var(--accent); font-weight: bold; }
-
-    /* Timeline */
-    .timeline { display: flex; flex-direction: column; gap: 0; }
-    .tl-item { display: flex; gap: 12px; padding: 8px 0; }
-    .tl-left { display: flex; flex-direction: column; align-items: center; width: 80px; flex-shrink: 0; }
-    .tl-time { font-size: 10px; color: var(--accent2); font-weight: bold; white-space: nowrap; }
-    .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin: 4px 0; border: 2px solid var(--accent2); flex-shrink: 0; }
-    .tl-line { flex: 1; width: 1px; background: var(--border); }
-    .tl-content { flex: 1; padding-bottom: 8px; }
-    .tl-title { font-size: 11px; font-weight: bold; color: var(--text); }
-    .tl-body  { font-size: 10px; color: var(--subtext); margin-top: 3px; }
-
-    /* Risk matrix */
-    .risk-grid { display: grid; grid-template-columns: auto repeat(4,1fr); gap: 2px; font-size: 10px; text-align: center; }
-    .risk-label { padding: 6px 8px; color: var(--muted); text-align: right; font-size: 9px; display: flex; align-items: center; justify-content: flex-end; }
-    .risk-cell { padding: 8px 4px; border-radius: 2px; font-weight: bold; font-size: 9px; cursor: default; }
-    .r-low      { background: rgba(77,124,15,.3);  color: var(--accent2); }
-    .r-med      { background: rgba(217,119,6,.25); color: var(--amber); }
-    .r-high     { background: rgba(185,28,28,.3);  color: #f87171; }
-    .r-extreme  { background: rgba(185,28,28,.6);  color: #fca5a5; }
-    .r-sel      { outline: 2px solid white; }
-
-    /* OPORD */
-    .opord-para { border-left: 3px solid var(--accent); padding-left: 14px; margin-bottom: 16px; }
-    .opord-title { font-size: 12px; font-weight: bold; color: var(--accent2); margin-bottom: 6px; letter-spacing: 1px; }
-    .opord-content { font-size: 11px; color: var(--text); line-height: 1.7; white-space: pre-wrap; }
-
-    /* IPB */
-    .ipb-box { border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
-    .ipb-box-hdr { padding: 8px 12px; background: rgba(255,255,255,.03); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
-    .ipb-box-body { padding: 12px; }
-    .threat-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
-    .threat-row:last-child { border-bottom: none; }
-    .threat-cap { font-size: 11px; flex: 1; }
-    .threat-prob { font-size: 10px; width: 50px; text-align: right; }
-
-    /* Wargaming */
-    .wg-row { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; }
-    .wg-action { flex: 1; }
-    .wg-response { flex: 1; color: var(--amber); }
-    .wg-outcome { flex: 1; color: var(--subtext); font-style: italic; }
-    .wg-hdr { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 3px; }
-    .wg-val { font-size: 11px; }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-    /* ─── AI PANEL ──────────────────────────────────────────────────────── */
-    .ai-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,.02); flex-shrink: 0; }
-    .ai-title { font-size: 12px; font-weight: bold; color: var(--accent2); letter-spacing: 1px; display: flex; align-items: center; gap: 8px; }
-    .ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); animation: pulse 2s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-    .ai-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
-    .ai-msg { display: flex; flex-direction: column; gap: 4px; }
-    .ai-msg-header { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
-    .ai-bubble { padding: 9px 12px; border-radius: 3px; font-size: 11px; line-height: 1.6; }
-    .ai-bubble.assistant { background: var(--highlight); border: 1px solid rgba(77,124,15,.3); color: var(--text); }
-    .ai-bubble.user      { background: var(--highlight2); border: 1px solid rgba(29,78,216,.3); color: var(--text); }
-    .ai-bubble.system    { background: rgba(217,119,6,.1); border: 1px solid rgba(217,119,6,.3); color: var(--amber); font-size: 10px; }
-    .ai-quick-prompts { padding: 8px 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
-    .ai-quick-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 2px; }
-    .quick-btn { padding: 6px 10px; font-size: 10px; background: var(--bg); border: 1px solid var(--border); color: var(--subtext); cursor: pointer; font-family: var(--font); text-align: left; border-radius: 2px; transition: all .15s; }
-    .quick-btn:hover { border-color: var(--accent2); color: var(--text); background: var(--highlight); }
-    .ai-input-area { padding: 10px 12px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; }
-    .ai-input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: 11px; padding: 8px 10px; border-radius: 2px; outline: none; resize: none; min-height: 36px; max-height: 80px; }
-    .ai-input:focus { border-color: var(--accent2); }
-    .ai-send { padding: 8px 12px; background: var(--accent); border: none; color: #fff; cursor: pointer; font-family: var(--font); font-size: 11px; border-radius: 2px; flex-shrink: 0; transition: background .15s; }
-    .ai-send:hover { background: var(--accent2); }
-    .ai-send:disabled { opacity: .5; cursor: not-allowed; }
-    .ai-thinking { display: flex; gap: 4px; align-items: center; padding: 8px 12px; }
-    .dot-pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); animation: bounce .8s infinite; }
-    .dot-pulse:nth-child(2) { animation-delay: .15s; }
-    .dot-pulse:nth-child(3) { animation-delay: .30s; }
-    @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
-
-    /* Step complete overlay */
-    .step-complete-banner { background: rgba(77,124,15,.15); border: 1px solid rgba(77,124,15,.4); border-radius: 3px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
-    .step-complete-banner .icon { font-size: 18px; }
-    .step-complete-banner .msg { font-size: 11px; color: var(--accent2); }
-    .step-complete-banner .next-btn { margin-left: auto; }
-
-    /* Responsive overrides for narrow main */
-    @media (max-width: 1100px) {
-      .grid-3 { grid-template-columns: 1fr 1fr; }
-    }
-  </style>
+/* ── TIMELINE ────────────────────────────────────────── */
+#timeline{
+  background:var(--glass);border-top:1px solid var(--border);
+  backdrop-filter:blur(12px);display:flex;flex-direction:column;overflow:hidden
+}
+.tl-hdr{
+  display:flex;align-items:center;gap:14px;padding:5px 16px;
+  border-bottom:1px solid var(--border);flex-shrink:0
+}
+.tl-ttl{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
+.tl-leg{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--sub)}
+.tl-leg-sq{width:8px;height:8px;border-radius:2px}
+.tl-btns{margin-left:auto;display:flex;gap:6px}
+.tl-btn{
+  width:26px;height:26px;border-radius:5px;background:rgba(255,255,255,.05);
+  border:1px solid var(--border);color:var(--sub);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s
+}
+.tl-btn:hover{border-color:var(--green);color:var(--green)}
+.tl-btn.on{background:var(--green);border-color:var(--green);color:#000}
+#tl-track{
+  flex:1;overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:thin;scrollbar-color:var(--muted) transparent;position:relative
+}
+#tl-inner{position:relative;height:100%;display:flex}
+.tl-day{
+  flex-shrink:0;width:120px;height:100%;
+  border-right:1px solid rgba(255,255,255,.05);position:relative
+}
+.tl-day-lbl{
+  font-size:9px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--muted);padding:5px 8px;position:relative;z-index:2
+}
+.phase-blk{
+  position:absolute;top:22px;height:calc(100% - 30px);
+  border-radius:6px;display:flex;align-items:center;padding:0 10px;
+  font-size:10px;font-weight:700;cursor:grab;white-space:nowrap;
+  user-select:none;box-shadow:0 2px 10px rgba(0,0,0,.5);
+  transition:opacity .15s,filter .15s;z-index:3
+}
+.phase-blk:hover{filter:brightness(1.15)}
+.phase-blk:active{cursor:grabbing;filter:brightness(1.2)}
+.ph-resize{
+  position:absolute;right:0;top:0;bottom:0;width:8px;
+  cursor:col-resize;background:rgba(0,0,0,.25);border-radius:0 6px 6px 0
+}
+#tl-now{
+  position:absolute;top:0;bottom:0;width:2px;
+  background:var(--green);box-shadow:0 0 10px var(--green);
+  z-index:10;pointer-events:none;transition:left .1s linear
+}
+#tl-now::before{
+  content:'NOW';position:absolute;top:5px;left:5px;
+  background:var(--green);color:#000;font-size:8px;font-weight:900;
+  padding:1px 4px;border-radius:2px;letter-spacing:.06em
+}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+</style>
 </head>
 <body>
 <div id="app">
 
-  <!-- ── TOPBAR ────────────────────────────────────────────────── -->
-  <header id="topbar">
-    <span class="topbar-logo">&#9651; ARMY AI PLANNER</span>
-    <span class="topbar-divider"></span>
-    <div class="topbar-meta"><span class="label">OPERATION</span><span class="value" id="op-name">OP IRON SENTINEL</span></div>
-    <span class="topbar-divider"></span>
-    <div class="topbar-meta"><span class="label">UNIT</span><span class="value">2-14 INF BN, 2 BCT</span></div>
-    <span class="topbar-divider"></span>
-    <div class="topbar-meta"><span class="label">CLASS</span><span class="value"><span class="badge badge-red">SECRET//NOFORN</span></span></div>
-    <span class="topbar-divider"></span>
-    <div class="topbar-meta"><span class="label">PLANNING HRZ</span><span class="value">D+0 to D+5</span></div>
-    <span class="topbar-spacer"></span>
-    <span class="status-pill warning">PLANNING IN PROGRESS</span>
-    <span class="topbar-divider"></span>
-    <span class="clock" id="clock">--:--:--Z</span>
-  </header>
+<!-- TOPBAR -->
+<header id="topbar">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="op-dot"></div>
+    <div><div class="op-name">OP IRON SENTINEL</div><div class="op-class">SECRET // NOFORN</div></div>
+  </div>
+  <div class="modes">
+    <button class="mode-btn active" data-mode="analyze" onclick="setMode('analyze')">Analyze</button>
+    <button class="mode-btn" data-mode="plan" onclick="setMode('plan')">Plan</button>
+    <button class="mode-btn" data-mode="wargame" onclick="setMode('wargame')">Wargame</button>
+    <button class="mode-btn" data-mode="order" onclick="setMode('order')">Order</button>
+  </div>
+  <div class="topbar-r">
+    <span class="cl-badge">SECRET</span>
+    <span class="clock" id="clock">000000Z</span>
+  </div>
+</header>
 
-  <!-- ── SIDEBAR ───────────────────────────────────────────────── -->
-  <nav id="sidebar">
-    <div class="sidebar-section">MDMP Steps</div>
+<!-- WORKSPACE -->
+<div id="workspace">
 
-    <div class="mdmp-step done"    data-step="0" onclick="goStep(0)">
-      <div class="step-num">&#10003;</div>
-      <div><div class="step-label">1. Mission Receipt</div><div class="step-sublabel">HHQ order, CDR initial guidance</div></div>
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+    <div class="lp-head" id="lp-head">Intelligence</div>
+    <div id="lp-body"></div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="legend">
+      <div class="leg-row"><div class="leg-dot" style="background:#ef4444"></div>Enemy force</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#3b82f6"></div>Friendly unit</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#f59e0b;border-radius:0;transform:rotate(45deg)"></div>Objective</div>
+      <div class="leg-row"><div class="leg-line" style="background:#f59e0b;border-top:2px dashed #f59e0b;height:0"></div>Phase line</div>
+      <div class="leg-row"><div class="leg-line" style="background:#3b82f6;height:2px"></div>Route</div>
     </div>
-    <div class="mdmp-step active"  data-step="1" onclick="goStep(1)">
-      <div class="step-num">2</div>
-      <div><div class="step-label">2. Mission Analysis</div><div class="step-sublabel">METT-TC, IPB, CCIR</div></div>
+  </div>
+
+  <!-- AI PANEL -->
+  <div id="ai-panel">
+    <div class="ai-hdr">
+      <div class="ai-hdr-dot"></div>
+      <div><div class="ai-hdr-title">AI Planning Assistant</div><div class="ai-hdr-sub">Click map elements for analysis</div></div>
     </div>
-    <div class="mdmp-step"         data-step="2" onclick="goStep(2)">
-      <div class="step-num">3</div>
-      <div><div class="step-label">3. COA Development</div><div class="step-sublabel">Develop &amp; screen COAs</div></div>
+    <div id="ai-msgs"></div>
+    <div class="ai-quick" id="ai-quick"></div>
+    <div class="ai-inp-row">
+      <textarea class="ai-inp" id="ai-inp" placeholder="Ask about the operation…" rows="1" onkeydown="handleKey(event)"></textarea>
+      <button class="ai-send" id="ai-send-btn" onclick="sendMsg()">
+        <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+      </button>
     </div>
-    <div class="mdmp-step"         data-step="3" onclick="goStep(3)">
-      <div class="step-num">4</div>
-      <div><div class="step-label">4. COA Analysis</div><div class="step-sublabel">Wargaming / synchronization</div></div>
+  </div>
+
+</div><!-- /#workspace -->
+
+<!-- TIMELINE -->
+<div id="timeline">
+  <div class="tl-hdr">
+    <span class="tl-ttl">Operation Timeline</span>
+    <span class="tl-leg"><span class="tl-leg-sq" style="background:#6366f1"></span>Planning</span>
+    <span class="tl-leg"><span class="tl-leg-sq" style="background:#10b981"></span>Movement</span>
+    <span class="tl-leg"><span class="tl-leg-sq" style="background:#ef4444"></span>Action</span>
+    <span class="tl-leg"><span class="tl-leg-sq" style="background:#f59e0b"></span>Consolidation</span>
+    <div class="tl-btns">
+      <button class="tl-btn" id="play-btn" onclick="tlToggle()" title="Play/Pause">▶</button>
+      <button class="tl-btn" onclick="tlReset()" title="Reset">↺</button>
     </div>
-    <div class="mdmp-step"         data-step="4" onclick="goStep(4)">
-      <div class="step-num">5</div>
-      <div><div class="step-label">5. COA Comparison</div><div class="step-sublabel">Decision matrix</div></div>
-    </div>
-    <div class="mdmp-step"         data-step="5" onclick="goStep(5)">
-      <div class="step-num">6</div>
-      <div><div class="step-label">6. COA Approval</div><div class="step-sublabel">CDR decision brief</div></div>
-    </div>
-    <div class="mdmp-step"         data-step="6" onclick="goStep(6)">
-      <div class="step-num">7</div>
-      <div><div class="step-label">7. Orders Production</div><div class="step-sublabel">OPORD / WARNORD / FRAGORD</div></div>
-    </div>
-
-    <div class="sidebar-tools">
-      <div class="sidebar-section">Quick Tools</div>
-      <button class="tool-btn" onclick="openTool('warnord')"><span class="icon">&#9888;</span> Generate WARNORD</button>
-      <button class="tool-btn" onclick="openTool('timeline')"><span class="icon">&#9201;</span> Planning Timeline</button>
-      <button class="tool-btn" onclick="openTool('ccir')"><span class="icon">&#9881;</span> CCIR Tracker</button>
-      <button class="tool-btn" onclick="openTool('risk')"><span class="icon">&#9651;</span> Risk Assessment</button>
-      <button class="tool-btn" onclick="openTool('docgen')"><span class="icon">&#128196;</span> Document Export</button>
-    </div>
-  </nav>
-
-  <!-- ── MAIN CONTENT ──────────────────────────────────────────── -->
-  <main id="main">
-
-    <!-- STEP 1: Mission Receipt -->
-    <div class="page" id="page-0">
-      <div class="page-header">
-        <div><div class="page-title">1. MISSION RECEIPT</div><div class="page-subtitle">Receive, understand, and analyze higher HQ order — initiate planning timeline</div></div>
-        <button class="ai-assist-btn" onclick="aiAssist('mission-receipt')">&#9651; AI ANALYZE HHQ ORDER</button>
-      </div>
-      <div class="step-complete-banner">
-        <span class="icon">&#10003;</span>
-        <span class="msg">Mission receipt complete. Commander's initial guidance issued. WARNORD #1 published D-12H.</span>
-        <button class="btn-sm btn-primary next-btn" onclick="goStep(1)">Continue to Mission Analysis &rarr;</button>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Higher HQ Mission Statement</span><div class="card-actions"><button class="btn-sm" onclick="aiAssist('parse-hhq')">AI Parse</button></div></div>
-          <div class="card-body">
-            <div class="field"><label>2 BCT MISSION (HHQ)</label>
-              <textarea style="min-height:100px">2 BCT attacks to seize and clear OBJ EAGLE (MG 342891) no later than D+3 to deny enemy use of the KARST VALLEY corridor and sets conditions for SBCT follow-on operations. Exploit success to secure PHASE LINE COPPER by D+5.</textarea>
-            </div>
-            <div class="field"><label>Commander's Intent (HHQ)</label>
-              <textarea>End State: Enemy forces in AO FALCON defeated and unable to conduct sustained offensive operations. KARST VALLEY secured and available for coalition logistics flow. Civilian infrastructure preserved to maximum extent possible.</textarea>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Commander's Initial Guidance</span></div>
-          <div class="card-body">
-            <div class="field"><label>Planning Time Available</label>
-              <input type="text" value="72 hours (D-3 to D+0)" />
-            </div>
-            <div class="field"><label>CDR's Initial Priority Tasks</label>
-              <textarea>1. Focus IPB on KARST VALLEY approaches and enemy AD coverage\n2. Develop minimum 2 viable COAs\n3. Maximize synchronization with 1-12 IN (BDE reserve)\n4. Protect civilian population — ROE strict compliance\n5. Logistics — plan for 96 hrs of sustained operations</textarea>
-            </div>
-            <div class="field"><label>Planning Constraints</label>
-              <textarea>- Do not cross PL AMBER without BCT approval\n- Aviation assets available D-1 to D+2 only\n- No fires within 600m of HADITHA village</textarea>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">Task to BN — AI Restated Mission</span><div class="card-actions"><button class="btn-sm btn-primary" onclick="aiAssist('restate-mission')">&#9651; AI Generate</button></div></div>
-        <div class="card-body">
-          <div id="restated-mission" style="font-size:12px;line-height:1.8;color:var(--text)">
-            <strong>WHO:</strong> 2-14 IN BN (reinforced with A Btry 2-17 FA, 172 EN Co (-), 2-14 BSTB ISR section)<br>
-            <strong>WHAT:</strong> Attacks to seize and clear OBJ EAGLE<br>
-            <strong>WHEN:</strong> NLT D+3 (H-Hour TBD, currently planned 0400L)<br>
-            <strong>WHERE:</strong> MG 342891, KARST VALLEY AO FALCON<br>
-            <strong>WHY (PURPOSE):</strong> To deny enemy use of the KARST VALLEY corridor and set conditions for SBCT follow-on operations
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- STEP 2: Mission Analysis -->
-    <div class="page active" id="page-1">
-      <div class="page-header">
-        <div><div class="page-title">2. MISSION ANALYSIS</div><div class="page-subtitle">METT-TC analysis · IPB · CCIR · Preliminary movement · Troop leading procedures</div></div>
-        <button class="ai-assist-btn" onclick="aiAssist('full-mettc')">&#9651; AI COMPLETE METT-TC</button>
-      </div>
-      <!-- METT-TC -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">METT-TC Analysis</span>
-          <div class="card-actions">
-            <button class="btn-sm" onclick="aiAssist('mettc-mission')">AI Analyze</button>
-            <span class="badge badge-amber">IN PROGRESS</span>
-          </div>
-        </div>
-        <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="mettc-tile">
-            <div class="tile-header"><span>M — MISSION</span><span class="badge badge-green">AI COMPLETE</span></div>
-            <textarea>Specified tasks: Seize OBJ EAGLE; Clear OBJ EAGLE; Secure PL COPPER by D+5.\nImplied tasks: Conduct ISR; Establish fire support plan; Plan sustainment; Coordinate with adjacent units.\nEssential task: Seize and clear OBJ EAGLE NLT D+3.</textarea>
-          </div>
-          <div class="mettc-tile">
-            <div class="tile-header"><span>E — ENEMY</span><span class="badge badge-amber">IN PROGRESS</span></div>
-            <textarea>Composition: 1x MRB(-) reinforced, est 600 pers. 12x BMP-2, 6x T-72B. ADA: 2x ZSU-23-4, 4x MANPADS.\nCapabilities: Defend, delay, hasty attack, limited EW.\nMost Likely COA: Defend in depth along KARST VALLEY with BP on high ground vic MG 344-892.\nMost Dangerous COA: Counterattack with armor along AXIS BEAR to isolate lead elements.</textarea>
-          </div>
-          <div class="mettc-tile">
-            <div class="tile-header"><span>T — TERRAIN &amp; WEATHER</span><span class="badge badge-amber">IN PROGRESS</span></div>
-            <textarea>OAKOC:\n• Observation: Limited by dense vegetation corridors; key terrain at RIDGE ALPHA (MG 341-894) dominates valley.\n• Avenues of Approach: AA1 (ROUTE BLUE) — suitable mechanized. AA2 (WADIS TRAIL) — dismounted only.\n• Key Terrain: RIDGE ALPHA, OBJ EAGLE, PL AMBER crossing sites.\n• Weather: D+0 to D+2 overcast, ceiling 800ft, winds 15kt NW — limits aviation. D+3+ clearing.</textarea>
-          </div>
-          <div class="mettc-tile">
-            <div class="tile-header"><span>T — TROOPS AVAILABLE</span><span class="badge badge-green">AI COMPLETE</span></div>
-            <textarea>2-14 IN BN (organic): 3x Rifle Co (A,B,C), HHC, BSB support.\nATTACHED: A Btry 2-17 FA (6x M109A7), 172 EN Co (-), 68th IBCT ISR Plt (2x RQ-7B).\nOPCON: ANGLICO team (CAS coordination).\nDETACHED: None.\nRATIO vs ENEMY: ~1.8:1 (below doctrinal 3:1 — requires synchronization to achieve local superiority).</textarea>
-          </div>
-          <div class="mettc-tile">
-            <div class="tile-header"><span>T — TIME</span><span class="badge badge-green">AI COMPLETE</span></div>
-            <textarea>Available planning time: 72 hrs.\nTime-space: 38 km approach march (AA to LD) — requires 6-8 hrs movement.\n1/3 - 2/3 Rule: CDR has 24 hrs; subordinates have 48 hrs.\nKey events: WARNORD #2 NLT +8h; COA brief NLT +36h; OPORD NLT +60h; SP time NLT D-0600L.</textarea>
-          </div>
-          <div class="mettc-tile">
-            <div class="tile-header"><span>C — CIVIL CONSIDERATIONS</span><span class="badge badge-amber">IN PROGRESS</span></div>
-            <textarea>HADITHA village (pop est 2,400) within AO — potential displacement risk.\nLocal leaders: Mukhtar Ahmed Al-Rashid — cooperating; tribal council meets MWF at mosque vic MG 340-890.\nKEY: Medical facility at MG 341-889 must be protected. Water treatment plant (MG 343-891) is critical infrastructure.\nCA team integration required for PHASE II.</textarea>
-          </div>
-        </div>
-      </div>
-      <!-- IPB -->
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Intelligence Preparation of the Battlefield (IPB)</span><div class="card-actions"><button class="btn-sm btn-primary" onclick="aiAssist('ipb')">&#9651; AI Build IPB</button></div></div>
-          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-            <div class="ipb-box">
-              <div class="ipb-box-hdr">Enemy Courses of Action</div>
-              <div class="ipb-box-body">
-                <div class="threat-row"><span class="threat-cap">MLCOA: Defend in depth — KARST VALLEY high ground BP</span><span class="badge badge-amber">65%</span></div>
-                <div class="threat-row"><span class="threat-cap">MDCOA: Armored counterattack — AXIS BEAR</span><span class="badge badge-red">20%</span></div>
-                <div class="threat-row"><span class="threat-cap">ALT: Delay — withdrawal to PL SILVER with harassment</span><span class="badge badge-blue">15%</span></div>
-              </div>
-            </div>
-            <div class="ipb-box">
-              <div class="ipb-box-hdr">High-Value Targets (HVT) / High-Payoff Targets (HPT)</div>
-              <div class="ipb-box-body">
-                <div class="threat-row"><span class="threat-cap">HVT-01: Enemy BN CDR — CP vic MG 346-893</span><span class="badge badge-red">HPT</span></div>
-                <div class="threat-row"><span class="threat-cap">HVT-02: ZSU-23-4 ADA systems (2x) — ADA threat to aviation</span><span class="badge badge-red">HPT</span></div>
-                <div class="threat-row"><span class="threat-cap">HVT-03: BMP-2 platoon BP — RIDGE ALPHA reverse slope</span><span class="badge badge-amber">HPT</span></div>
-                <div class="threat-row"><span class="threat-cap">HVT-04: EW/jamming node — vic MG 347-890</span><span class="badge badge-amber">HVT</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">CCIR / FFIR / PIR</span><div class="card-actions"><button class="btn-sm" onclick="aiAssist('ccir-gen')">AI Generate</button></div></div>
-          <div class="card-body">
-            <table>
-              <thead><tr><th>#</th><th>CCIR</th><th>TYPE</th><th>STATUS</th></tr></thead>
-              <tbody>
-                <tr><td>1</td><td>Has enemy committed armor reserve along AXIS BEAR?</td><td><span class="badge badge-red">PIR</span></td><td><span class="badge badge-amber">OPEN</span></td></tr>
-                <tr><td>2</td><td>Can BN seize OBJ EAGLE within 8hrs of H-Hour?</td><td><span class="badge badge-blue">FFIR</span></td><td><span class="badge badge-amber">OPEN</span></td></tr>
-                <tr><td>3</td><td>Are ADA systems active along AXIS BLUE (aviation route)?</td><td><span class="badge badge-red">PIR</span></td><td><span class="badge badge-green">ANSWERED</span></td></tr>
-                <tr><td>4</td><td>Can BSB sustain 96-hr operation without resupply?</td><td><span class="badge badge-blue">FFIR</span></td><td><span class="badge badge-amber">OPEN</span></td></tr>
-                <tr><td>5</td><td>Is HADITHA bridge capable of MLC-70 traffic?</td><td><span class="badge badge-blue">FFIR</span></td><td><span class="badge badge-red">UNKNOWN</span></td></tr>
-              </tbody>
-            </table>
-            <div style="margin-top:12px;display:flex;gap:8px">
-              <button class="btn-sm btn-primary" onclick="addCCIR()">+ Add CCIR</button>
-              <button class="btn-sm" onclick="aiAssist('ccir-priority')">AI Prioritize</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">Mission Analysis Brief — AI Summary</span><div class="card-actions"><button class="btn-sm btn-primary" onclick="aiAssist('ma-brief')">&#9651; Regenerate</button></div></div>
-        <div class="card-body" id="ma-brief-content" style="font-size:11px;line-height:1.8">
-          <strong>Restated Mission:</strong> 2-14 IN BN (REIN) attacks to seize and clear OBJ EAGLE (MG 342891) NLT D+3 to deny enemy use of the KARST VALLEY corridor.<br><br>
-          <strong>CDR's Intent:</strong> <em>[Awaiting CDR input]</em><br><br>
-          <strong>Planning Considerations:</strong> Troop ratio below doctrinal 3:1 — synchronization and fires mass is critical. Aviation limited D+3. MLC-70 bridge status unverified — logistics risk. Enemy ADA threat requires SEAD prior to aviation operations.<br><br>
-          <strong>AI Risk Assessment:</strong> <span class="badge badge-amber">MODERATE-HIGH</span> — Enemy has prepared positions on dominant terrain. Recommend early ISR saturation of RIDGE ALPHA and AXIS BEAR.
-        </div>
-      </div>
-    </div>
-
-    <!-- STEP 3: COA Development -->
-    <div class="page" id="page-2">
-      <div class="page-header">
-        <div><div class="page-title">3. COURSE OF ACTION DEVELOPMENT</div><div class="page-subtitle">Develop, refine, and screen COAs against validity criteria</div></div>
-        <button class="ai-assist-btn" onclick="aiAssist('gen-coa')">&#9651; AI GENERATE COAs</button>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">COA Screening Criteria (AASLT-F)</span></div>
-        <div class="card-body">
-          <div style="display:flex;gap:12px;flex-wrap:wrap">
-            <span class="badge badge-green">&#10003; ADEQUATE</span>
-            <span class="badge badge-green">&#10003; ACCEPTABLE</span>
-            <span class="badge badge-green">&#10003; SUITABLE</span>
-            <span class="badge badge-green">&#10003; FEASIBLE</span>
-            <span class="badge badge-green">&#10003; DISTINGUISHABLE</span>
-            <span class="badge badge-amber">&#9888; COMPLETE (verify)</span>
-          </div>
-        </div>
-      </div>
-      <div class="grid-2">
-        <!-- COA 1 -->
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">COA 1 — DIRECT ASSAULT (AXIS BLUE)</span>
-            <span class="badge badge-green">VALID</span>
-          </div>
-          <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
-            <div style="font-size:11px;line-height:1.7">
-              <strong>Concept:</strong> BN attacks along AA1 (ROUTE BLUE) with two companies abreast (A Co left, B Co right). C Co follows-and-supports. EN Co breaches obstacles at PL AMBER. A Btry provides suppression of RIDGE ALPHA. RQ-7B provides continuous ISR on AXIS BEAR (MDCOA). Air assault option held in reserve.
-            </div>
-            <div class="grid-2" style="gap:8px">
-              <div class="mettc-tile" style="padding:8px">
-                <div class="tile-header" style="margin-bottom:4px"><span>ADVANTAGES</span></div>
-                <div style="font-size:10px;color:var(--accent2)">✓ Mechanized — maintains tempo<br>✓ Mass combat power<br>✓ Shorter approach march<br>✓ Simpler C2</div>
-              </div>
-              <div class="mettc-tile" style="padding:8px">
-                <div class="tile-header" style="margin-bottom:4px"><span>DISADVANTAGES</span></div>
-                <div style="font-size:10px;color:#f87171">✗ Canalized — enemy advantage<br>✗ ADA threat on AXIS BLUE<br>✗ Limited maneuver room<br>✗ Bridge MLC risk</div>
-              </div>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                <span style="font-size:10px;color:var(--muted)">AI Feasibility Score</span>
-                <span style="font-size:10px;color:var(--accent2);font-weight:bold">72 / 100</span>
-              </div>
-              <div class="progress-bar"><div class="progress-fill" style="width:72%"></div></div>
-            </div>
-          </div>
-        </div>
-        <!-- COA 2 -->
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">COA 2 — TURNING MOVEMENT (WADIS FLANK)</span>
-            <span class="badge badge-green">VALID</span>
-          </div>
-          <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
-            <div style="font-size:11px;line-height:1.7">
-              <strong>Concept:</strong> B Co conducts feint along AA1 to fix enemy. A Co (dismounted) infiltrates along AA2 (WADIS TRAIL) to seize RIDGE ALPHA. Simultaneously, C Co air assaults onto OBJ EAGLE from the north. EN Co secures LOC. A Btry fires preparation on BP positions. Timing: A Co/AA2 = H-4hr; Air assault = H-Hour.
-            </div>
-            <div class="grid-2" style="gap:8px">
-              <div class="mettc-tile" style="padding:8px">
-                <div class="tile-header" style="margin-bottom:4px"><span>ADVANTAGES</span></div>
-                <div style="font-size:10px;color:var(--accent2)">✓ Avoids canalized approach<br>✓ Achieves surprise<br>✓ Bypasses ADA threat<br>✓ Seizes key terrain first</div>
-              </div>
-              <div class="mettc-tile" style="padding:8px">
-                <div class="tile-header" style="margin-bottom:4px"><span>DISADVANTAGES</span></div>
-                <div style="font-size:10px;color:#f87171">✗ Complex synchronization<br>✗ Relies on aviation (D+0-2)<br>✗ Split logistics<br>✗ Weather dependency</div>
-              </div>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                <span style="font-size:10px;color:var(--muted)">AI Feasibility Score</span>
-                <span style="font-size:10px;color:var(--accent2);font-weight:bold">81 / 100</span>
-              </div>
-              <div class="progress-bar"><div class="progress-fill" style="width:81%"></div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">COA Synchronization Overview</span><div class="card-actions"><button class="btn-sm btn-primary" onclick="aiAssist('sync-matrix')">&#9651; AI Build Sync Matrix</button></div></div>
-        <div class="card-body">
-          <table>
-            <thead><tr><th>WARFIGHTING FUNCTION</th><th>COA 1 — DIRECT</th><th>COA 2 — TURNING</th></tr></thead>
-            <tbody>
-              <tr><td>Maneuver</td><td>2 Co abreast / 1 F&amp;S</td><td>Feint + infiltration + air assault</td></tr>
-              <tr><td>Fires</td><td>Suppression RIDGE ALPHA, PREP OBJ EAGLE</td><td>PREP BPs + SEAD + on-call CAS</td></tr>
-              <tr><td>Intelligence</td><td>RQ-7B on AXIS BEAR (MDCOA)</td><td>RQ-7B on AXIS BEAR + AA2 route</td></tr>
-              <tr><td>Protection</td><td>ADA risk mitigated by ground approach</td><td>SEAD required — aviation vulnerable H-15min</td></tr>
-              <tr><td>Sustainment</td><td>BSB follow AXIS BLUE</td><td>Split BSB — FARP required</td></tr>
-              <tr><td>C2</td><td>TAC CP follows lead company</td><td>TAC CP splits: ground &amp; air nodes</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- STEP 4: COA Analysis / Wargaming -->
-    <div class="page" id="page-3">
-      <div class="page-header">
-        <div><div class="page-title">4. COA ANALYSIS — WARGAMING</div><div class="page-subtitle">Conduct wargame to identify decision points, synchronization gaps, and branch/sequel triggers</div></div>
-        <button class="ai-assist-btn" onclick="aiAssist('wargame')">&#9651; AI RUN WARGAME</button>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">Wargame Matrix — COA 2 (TURNING MOVEMENT)</span><div class="card-actions"><span class="badge badge-blue">SELECTED FOR WARGAME</span></div></div>
-        <div style="border:1px solid var(--border);border-top:none">
-          <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;border-bottom:1px solid var(--border);background:rgba(255,255,255,.03)">
-            <div style="padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">PHASE</div>
-            <div style="padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">FRIENDLY ACTION</div>
-            <div style="padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--amber)">ENEMY REACTION (MLCOA)</div>
-            <div style="padding:8px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">ASSESSMENT / DP</div>
-          </div>
-          <div class="wg-row">
-            <div style="width:80px;font-size:10px;color:var(--accent2);font-weight:bold;flex-shrink:0">H-4hr</div>
-            <div class="wg-action"><div class="wg-hdr">FRIENDLY</div><div class="wg-val">B Co feint along AXIS BLUE — fix enemy on BP. A Co begins AA2 infiltration. A Btry conducts SEAD on ZSU positions.</div></div>
-            <div class="wg-response"><div class="wg-hdr">ENEMY</div><div class="wg-val">Enemy reinforces BP on RIDGE ALPHA. 2x BMP-2 redeploy from reserve. ADA radar activates — MANPADS threat elevated.</div></div>
-            <div class="wg-outcome"><div class="wg-hdr">DP / NOTE</div><div class="wg-val"><span class="badge badge-red">DP-1</span> If SEAD fails to suppress ADA — abort air assault, execute COA 1 branch. Trigger: ADA active 30min after SEAD.</div></div>
-          </div>
-          <div class="wg-row">
-            <div style="width:80px;font-size:10px;color:var(--accent2);font-weight:bold;flex-shrink:0">H-1hr</div>
-            <div class="wg-action"><div class="wg-hdr">FRIENDLY</div><div class="wg-val">A Co seizes RIDGE ALPHA. Artillery shifts to OBJ EAGLE. C Co loads aircraft for air assault. B Co increases feint intensity.</div></div>
-            <div class="wg-response"><div class="wg-hdr">ENEMY</div><div class="wg-val">Enemy detects loss of RIDGE ALPHA. Begins reorientation of BP forces. Possible early use of armor reserve.</div></div>
-            <div class="wg-outcome"><div class="wg-hdr">DP / NOTE</div><div class="wg-val"><span class="badge badge-amber">DP-2</span> If enemy armor detected moving on AXIS BEAR — immediate CAS request and shift B Co to screen. Trigger: ISR contact report.</div></div>
-          </div>
-          <div class="wg-row">
-            <div style="width:80px;font-size:10px;color:var(--accent2);font-weight:bold;flex-shrink:0">H-Hour</div>
-            <div class="wg-action"><div class="wg-hdr">FRIENDLY</div><div class="wg-val">C Co air assaults OBJ EAGLE (LZ FALCON). A Co attacks from RIDGE ALPHA, destroying remaining BP defenders. B Co exploitation begins along AXIS BLUE.</div></div>
-            <div class="wg-response"><div class="wg-hdr">ENEMY</div><div class="wg-val">Enemy defense collapses with loss of RIDGE ALPHA + air assault on OBJ EAGLE. Remnants attempt withdrawal via AXIS SILVER.</div></div>
-            <div class="wg-outcome"><div class="wg-hdr">DP / NOTE</div><div class="wg-val"><span class="badge badge-green">GO</span> If OBJ EAGLE secured within 2hrs — immediately exploit toward PL COPPER with B Co lead. Trigger: C Co SECURE report.</div></div>
-          </div>
-          <div class="wg-row">
-            <div style="width:80px;font-size:10px;color:var(--accent2);font-weight:bold;flex-shrink:0">H+2</div>
-            <div class="wg-action"><div class="wg-hdr">FRIENDLY</div><div class="wg-val">Consolidate OBJ EAGLE. Establish defensive positions. BSB begins resupply via AXIS BLUE. CASEVAC priorities executed. LOGPAC arrives.</div></div>
-            <div class="wg-response"><div class="wg-hdr">ENEMY</div><div class="wg-val">MDCOA: Armored counterattack with T-72s along AXIS BEAR to retake RIDGE ALPHA.</div></div>
-            <div class="wg-outcome"><div class="wg-hdr">DP / NOTE</div><div class="wg-val"><span class="badge badge-red">DP-3</span> Counterattack trigger — A Co holds RIDGE ALPHA; CAS destroys armor. If A Co cannot hold, request BDE reserve (1-12 IN).</div></div>
-          </div>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Decision Points Summary</span></div>
-          <div class="card-body">
-            <table>
-              <thead><tr><th>DP</th><th>TRIGGER</th><th>CDR ACTION</th></tr></thead>
-              <tbody>
-                <tr><td><span class="badge badge-red">DP-1</span></td><td>ADA active 30min post-SEAD</td><td>Branch to COA 1</td></tr>
-                <tr><td><span class="badge badge-amber">DP-2</span></td><td>Enemy armor on AXIS BEAR</td><td>CAS + B Co screen</td></tr>
-                <tr><td><span class="badge badge-green">DP-3</span></td><td>C Co SECURE report</td><td>B Co exploit to PL COPPER</td></tr>
-                <tr><td><span class="badge badge-red">DP-4</span></td><td>A Co cannot hold RIDGE ALPHA</td><td>Request BDE reserve</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Synchronization Gaps Identified</span><div class="card-actions"><button class="btn-sm" onclick="aiAssist('sync-gaps')">AI Analyze</button></div></div>
-          <div class="card-body">
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <div style="padding:8px;background:rgba(185,28,28,.1);border:1px solid rgba(185,28,28,.3);border-radius:2px;font-size:11px"><span class="badge badge-red" style="margin-right:6px">GAP</span>FARP location not specified — aviation sustainability risk</div>
-              <div style="padding:8px;background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.3);border-radius:2px;font-size:11px"><span class="badge badge-amber" style="margin-right:6px">GAP</span>Fire support coordination line (FSCL) not established for PHASE II</div>
-              <div style="padding:8px;background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.3);border-radius:2px;font-size:11px"><span class="badge badge-amber" style="margin-right:6px">GAP</span>CASEVAC plan for AA2 route — dismounted casualty extraction not planned</div>
-              <div style="padding:8px;background:rgba(77,124,15,.1);border:1px solid rgba(77,124,15,.3);border-radius:2px;font-size:11px"><span class="badge badge-green" style="margin-right:6px">OK</span>Fires synchronization adequate for PHASE I</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- STEP 5: COA Comparison -->
-    <div class="page" id="page-4">
-      <div class="page-header">
-        <div><div class="page-title">5. COURSE OF ACTION COMPARISON</div><div class="page-subtitle">Weighted decision matrix — staff evaluates COAs against criteria</div></div>
-        <button class="ai-assist-btn" onclick="aiAssist('compare-coas')">&#9651; AI RECOMMEND COA</button>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">Staff Decision Matrix</span><div class="card-actions"><button class="btn-sm" onclick="aiAssist('matrix-weights')">AI Suggest Weights</button></div></div>
-        <div class="card-body">
-          <table>
-            <thead>
-              <tr class="matrix-hdr">
-                <th style="width:220px">EVALUATION CRITERION</th>
-                <th style="text-align:center">WEIGHT</th>
-                <th style="text-align:center">COA 1<br><small>DIRECT</small></th>
-                <th style="text-align:center">COA 1<br><small>WEIGHTED</small></th>
-                <th style="text-align:center">COA 2<br><small>TURNING</small></th>
-                <th style="text-align:center">COA 2<br><small>WEIGHTED</small></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>Accomplishes the Mission</td><td class="score-cell">20%</td><td class="score-cell">3</td><td class="score-cell">0.60</td><td class="score-cell">4</td><td class="score-cell matrix-best">0.80</td></tr>
-              <tr><td>Protects Troops / Minimizes Casualties</td><td class="score-cell">20%</td><td class="score-cell">2</td><td class="score-cell">0.40</td><td class="score-cell">4</td><td class="score-cell matrix-best">0.80</td></tr>
-              <tr><td>Exploits Surprise / Initiative</td><td class="score-cell">15%</td><td class="score-cell">2</td><td class="score-cell">0.30</td><td class="score-cell">5</td><td class="score-cell matrix-best">0.75</td></tr>
-              <tr><td>Sustainability (Logistics)</td><td class="score-cell">15%</td><td class="score-cell">4</td><td class="score-cell matrix-best">0.60</td><td class="score-cell">2</td><td class="score-cell">0.30</td></tr>
-              <tr><td>Flexibility / Branch Capability</td><td class="score-cell">10%</td><td class="score-cell">3</td><td class="score-cell">0.30</td><td class="score-cell">3</td><td class="score-cell">0.30</td></tr>
-              <tr><td>C2 Simplicity</td><td class="score-cell">10%</td><td class="score-cell">4</td><td class="score-cell matrix-best">0.40</td><td class="score-cell">2</td><td class="score-cell">0.20</td></tr>
-              <tr><td>Tempo / Speed of Execution</td><td class="score-cell">10%</td><td class="score-cell">3</td><td class="score-cell">0.30</td><td class="score-cell">4</td><td class="score-cell matrix-best">0.40</td></tr>
-              <tr class="total-row">
-                <td><strong>TOTAL SCORE</strong></td>
-                <td class="score-cell"><strong>100%</strong></td>
-                <td class="score-cell"></td>
-                <td class="score-cell"><strong>2.90</strong></td>
-                <td class="score-cell"></td>
-                <td class="score-cell" style="color:var(--accent2)"><strong>3.55 &#9651;</strong></td>
-              </tr>
-            </tbody>
-          </table>
-          <div style="margin-top:14px;padding:10px 14px;background:var(--highlight);border:1px solid rgba(77,124,15,.4);border-radius:3px;font-size:11px">
-            <strong style="color:var(--accent2)">AI RECOMMENDATION:</strong> COA 2 (TURNING MOVEMENT) scores higher across mission accomplishment, force protection, and surprise. Primary risk is logistics complexity and aviation dependency. Recommend COA 2 with logistics annex addressing FARP and split-BSB operations. Present to CDR with risk mitigation measures.
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- STEP 6: COA Approval -->
-    <div class="page" id="page-5">
-      <div class="page-header">
-        <div><div class="page-title">6. COA APPROVAL</div><div class="page-subtitle">Commander's decision brief — CDR selects and refines the COA</div></div>
-        <button class="ai-assist-btn" onclick="aiAssist('decision-brief')">&#9651; AI BUILD DECISION BRIEF</button>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Commander's Decision</span></div>
-          <div class="card-body">
-            <div class="field"><label>Selected COA</label>
-              <select><option selected>COA 2 — TURNING MOVEMENT (Wadis Flank)</option><option>COA 1 — DIRECT ASSAULT (Axis Blue)</option></select>
-            </div>
-            <div class="field"><label>CDR Modifications</label>
-              <textarea>1. C Co air assault to conduct deception landing at ALT LZ HAWK before true landing at LZ FALCON — maximize surprise.\n2. B Co feint upgraded to limited-objective attack — seize PL AMBER crossing site to deceive enemy.\n3. EN Co (-) task-organized to A Co for AA2 route obstacle breaching.\n4. FA fires must include smoke on RIDGE ALPHA to mask A Co movement.</textarea>
-            </div>
-            <div class="field"><label>CDR's Intent (refined)</label>
-              <textarea>PURPOSE: Seize OBJ EAGLE to deny enemy KARST VALLEY corridor.\nMETHOD: Turning movement seizing dominant terrain (RIDGE ALPHA) to collapse enemy defense, simultaneous air assault to seize OBJ EAGLE.\nEND STATE: OBJ EAGLE secured, enemy unable to reconstitute, LOC open for BCT follow-on, civilians protected.</textarea>
-            </div>
-            <div style="display:flex;gap:8px">
-              <button class="btn-sm btn-primary">&#10003; CDR APPROVES — Proceed to OPORD</button>
-              <button class="btn-sm">Request Revision</button>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Decision Brief Checklist</span></div>
-          <div class="card-body">
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <div style="display:flex;align-items:center;gap:10px;padding:7px;border-radius:2px;background:rgba(77,124,15,.1)"><span style="color:var(--accent2)">&#10003;</span><span style="font-size:11px">Situation and Mission</span><span class="badge badge-green" style="margin-left:auto">DONE</span></div>
-              <div style="display:flex;align-items:center;gap:10px;padding:7px;border-radius:2px;background:rgba(77,124,15,.1)"><span style="color:var(--accent2)">&#10003;</span><span style="font-size:11px">Commander's Analysis (METT-TC)</span><span class="badge badge-green" style="margin-left:auto">DONE</span></div>
-              <div style="display:flex;align-items:center;gap:10px;padding:7px;border-radius:2px;background:rgba(77,124,15,.1)"><span style="color:var(--accent2)">&#10003;</span><span style="font-size:11px">COA Comparison Matrix</span><span class="badge badge-green" style="margin-left:auto">DONE</span></div>
-              <div style="display:flex;align-items:center;gap:10px;padding:7px;border-radius:2px;background:rgba(77,124,15,.1)"><span style="color:var(--accent2)">&#10003;</span><span style="font-size:11px">Staff Recommendation</span><span class="badge badge-green" style="margin-left:auto">DONE</span></div>
-              <div style="display:flex;align-items:center;gap:10px;padding:7px;border-radius:2px;background:rgba(217,119,6,.1)"><span style="color:var(--amber)">&#9888;</span><span style="font-size:11px">Risk Assessment Accepted</span><span class="badge badge-amber" style="margin-left:auto">PENDING</span></div>
-              <div style="display:flex;align-items:center;gap:10px;padding:7px;border-radius:2px;background:rgba(217,119,6,.1)"><span style="color:var(--amber)">&#9888;</span><span style="font-size:11px">CCIR Validated by CDR</span><span class="badge badge-amber" style="margin-left:auto">PENDING</span></div>
-              <div style="display:flex;align-items:center;gap:10px;padding:7px;border-radius:2px;background:rgba(77,124,15,.1)"><span style="color:var(--accent2)">&#10003;</span><span style="font-size:11px">WARNORD #3 Issued</span><span class="badge badge-green" style="margin-left:auto">DONE</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- STEP 7: Orders Production -->
-    <div class="page" id="page-6">
-      <div class="page-header">
-        <div><div class="page-title">7. ORDERS PRODUCTION</div><div class="page-subtitle">OPORD — 5-paragraph format · AI-assisted generation and validation</div></div>
-        <button class="ai-assist-btn" onclick="aiAssist('gen-opord')">&#9651; AI GENERATE FULL OPORD</button>
-      </div>
-      <div class="grid-2" style="align-items:start">
-        <div style="display:flex;flex-direction:column;gap:16px">
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">OPERATION ORDER 001-XX</span>
-              <div class="card-actions">
-                <span class="badge badge-red">SECRET//NOFORN</span>
-                <button class="btn-sm">Export</button>
-              </div>
-            </div>
-            <div class="card-body">
-              <div style="text-align:center;font-size:12px;margin-bottom:16px;color:var(--muted)">
-                COPY __ OF __ COPIES<br>
-                HQ, 2-14 IN BN<br>
-                GRID MG 330 880<br>
-                DTG: 091800ZMAY26<br>
-                <strong style="color:var(--accent2)">OPERATION ORDER 001-26 (OP IRON SENTINEL)</strong>
-              </div>
-
-              <div class="opord-para">
-                <div class="opord-title">1. SITUATION</div>
-                <div class="opord-content" id="opord-sit">a. Enemy Forces. Enemy 3d MRB(-) (est 600 pers, 12x BMP-2, 6x T-72B) defends in depth along KARST VALLEY with BPs on RIDGE ALPHA. ADA: 2x ZSU-23-4, est 4x MANPADS. Most likely enemy COA: defend from prepared BPs on high ground. Most dangerous: armored counterattack along AXIS BEAR. See ANNEX B (Intelligence) for details.
-
-b. Friendly Forces. 2 BCT attacks to seize and clear OBJ EAGLE NLT D+3. 1-12 IN BN is BCT reserve, prepared to reinforce or exploit. Adjacent: 3-67 AR (left), 4-25 IN (right). See ANNEX A (Task Organization).
-
-c. Attachments and Detachments. ATTACHED: A Btry 2-17 FA, 172 EN Co(-), ISR Plt (2x RQ-7B), ANGLICO. OPCON: See ANNEX A.</div>
-              </div>
-
-              <div class="opord-para">
-                <div class="opord-title">2. MISSION</div>
-                <div class="opord-content">2-14 IN BN (REIN) attacks along AXIS BLUE and AA2 NLT H-Hour (D+0, 0400L) to seize and clear OBJ EAGLE (MG 342891) NLT D+3 in order to deny enemy use of the KARST VALLEY corridor and set conditions for BCT follow-on operations.</div>
-              </div>
-
-              <div class="opord-para">
-                <div class="opord-title">3. EXECUTION</div>
-                <div class="opord-content" id="opord-exec">Commander's Intent: [See Para 3a]
-
-a. CDR's Intent.
-PURPOSE: Seize OBJ EAGLE to deny enemy the KARST VALLEY corridor.
-METHOD: Turning movement — seize dominant terrain (RIDGE ALPHA) to collapse enemy defense; simultaneous air assault onto OBJ EAGLE.
-END STATE: OBJ EAGLE secured, enemy unable to reconstitute in AO FALCON.
-
-b. Concept of Operations. [TURNING MOVEMENT — COA 2 (MODIFIED)]
-PHASE I (H-4 to H-Hour): B Co conducts feint / limited-objective attack on AXIS BLUE to fix enemy. A Co (REIN, EN Co-) infiltrates via AA2 to seize RIDGE ALPHA. A Btry conducts SEAD and suppression of BPs. ISR covers AXIS BEAR for MDCOA.
-PHASE II (H-Hour): C Co air assaults LZ HAWK (deception), then LZ FALCON — seizes OBJ EAGLE. A Co attacks from RIDGE ALPHA. B Co exploitation along AXIS BLUE on CDR order.
-PHASE III (H+2+): Consolidate OBJ EAGLE. Defend against counterattack. Prepare exploitation to PL COPPER.
-
-c. Tasks to Subordinate Units.
-A CO (REIN): Infiltrate AA2 NLT H-4. Seize RIDGE ALPHA NLT H-1. Attack to clear OBJ EAGLE northern approach.
-B CO: Conduct feint/LOA on AXIS BLUE NLT H-4. Fix enemy BP. On order, exploit to PL COPPER.
-C CO: Air assault LZ HAWK (deception H-30min), LZ FALCON (H-Hour). Seize and clear OBJ EAGLE.
-A BTY 2-17 FA: SEAD ZSU vic MG 344-893. PREP OBJ EAGLE H-15min. On-call CAS coordination with ANGLICO.
-172 EN CO(-): Task-organized A CO. Clear obstacles ROUTE AA2. Prepare bridge crossing vic MG 342-887 by H-2.
-
-d. Coordinating Instructions.
-(1) LD/LC: Phase Line AMBER — H-4 (A Co); H-2 (B Co)
-(2) Fires: FSCL established at PL COPPER. No fires within 600m HADITHA village.
-(3) Decision Points: DP-1 (ADA status H-3), DP-2 (Armor on AXIS BEAR), DP-3 (C Co SECURE), DP-4 (RIDGE ALPHA hold).
-(4) ROE: Positive ID required. Minimize collateral damage.
-(5) EMCON: EMCON DELTA H-4 to H-Hour (PHASE I).</div>
-              </div>
-
-              <div class="opord-para">
-                <div class="opord-title">4. SUSTAINMENT</div>
-                <div class="opord-content">a. Logistics. BSB provides all classes of supply. LOGPAC to A Co via LZ FALCON H+3. FARP established vic MG 337-883 NLT H-2 (aviation fuel Cl III). 96-hr sustainment planned.
-b. Medical. BAS located MG 332-884. CASEVAC: Priority MEDEVAC for Cat A/B. AA2 — manual litter to CASEVAC point MG 341-889.
-c. Maintenance. Deadline vehicles held at BRT MG 331-882. Recovery priority: combat vehicles, then wheeled.
-See ANNEX F (Sustainment) for details.</div>
-              </div>
-
-              <div class="opord-para">
-                <div class="opord-title">5. COMMAND AND SIGNAL</div>
-                <div class="opord-content">a. Command. BN CDR with B Co (TAC-1). XO at BN MAIN. BN CDR displaces to TAC-2 (vic OBJ EAGLE) NLT H+1. Succession: XO, S3, A Co CDR.
-b. Signal. All comms IAW ANNEX H (Signal). PACE plan: Primary SINCGARS, Alt EPLRS, Contingency SATCOM, Emergency visual signals (VS-17 orange).
-c. Reports. ACE reports every 2 hours. SITREP at H+2, H+4, H+8. CCIR reports immediately.
-
-ACKNOWLEDGE//
-[CDR Signature Block]
-2-14 IN BN</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- Right column: validation + annexes -->
-        <div style="display:flex;flex-direction:column;gap:16px">
-          <div class="card">
-            <div class="card-header"><span class="card-title">AI Order Validation</span><div class="card-actions"><button class="btn-sm btn-primary" onclick="aiAssist('validate-opord')">&#9651; Validate</button></div></div>
-            <div class="card-body">
-              <div style="display:flex;flex-direction:column;gap:6px">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px">5-paragraph format complete</span><span class="badge badge-green">PASS</span></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px">Mission statement (SMEWTT)</span><span class="badge badge-green">PASS</span></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px">Tasks to subordinates cover all units</span><span class="badge badge-amber">WARN</span></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px">FSCL / fire support measures</span><span class="badge badge-green">PASS</span></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px">CASEVAC / medical plan</span><span class="badge badge-amber">WARN</span></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px">ROE reference included</span><span class="badge badge-green">PASS</span></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px">CCIR / reporting requirements</span><span class="badge badge-green">PASS</span></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0"><span style="font-size:11px">Decision points referenced</span><span class="badge badge-green">PASS</span></div>
-              </div>
-              <div style="margin-top:12px;padding:8px;background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.3);border-radius:2px;font-size:10px;color:var(--amber)">
-                &#9888; WARNING: ANGLICO not tasked explicitly in Para 3c. CASEVAC on AA2 lacks dedicated extraction team designation. Review before issuing.
-              </div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-header"><span class="card-title">Annexes Status</span></div>
-            <div class="card-body">
-              <table>
-                <thead><tr><th>ANNEX</th><th>TITLE</th><th>STATUS</th><th></th></tr></thead>
-                <tbody>
-                  <tr><td>A</td><td>Task Organization</td><td><span class="badge badge-green">READY</span></td><td><button class="btn-sm">View</button></td></tr>
-                  <tr><td>B</td><td>Intelligence (IPB)</td><td><span class="badge badge-green">READY</span></td><td><button class="btn-sm">View</button></td></tr>
-                  <tr><td>C</td><td>Operations Overlay</td><td><span class="badge badge-amber">DRAFT</span></td><td><button class="btn-sm">View</button></td></tr>
-                  <tr><td>D</td><td>Fire Support</td><td><span class="badge badge-green">READY</span></td><td><button class="btn-sm">View</button></td></tr>
-                  <tr><td>E</td><td>Engineer / Obstacle</td><td><span class="badge badge-amber">DRAFT</span></td><td><button class="btn-sm">View</button></td></tr>
-                  <tr><td>F</td><td>Sustainment</td><td><span class="badge badge-green">READY</span></td><td><button class="btn-sm">View</button></td></tr>
-                  <tr><td>G</td><td>Aviation</td><td><span class="badge badge-amber">DRAFT</span></td><td><button class="btn-sm">View</button></td></tr>
-                  <tr><td>H</td><td>Signal / PACE</td><td><span class="badge badge-green">READY</span></td><td><button class="btn-sm">View</button></td></tr>
-                  <tr><td>I</td><td>ROE Card</td><td><span class="badge badge-green">READY</span></td><td><button class="btn-sm">View</button></td></tr>
-                </tbody>
-              </table>
-              <div style="margin-top:12px;display:flex;gap:8px">
-                <button class="btn-sm btn-primary" onclick="aiAssist('gen-annexes')">&#9651; AI Draft Missing Annexes</button>
-                <button class="btn-sm">Export Full OPORD</button>
-              </div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-header"><span class="card-title">Issue &amp; Acknowledge</span></div>
-            <div class="card-body">
-              <table>
-                <thead><tr><th>UNIT</th><th>ISSUED</th><th>ACKNOWLEDGED</th></tr></thead>
-                <tbody>
-                  <tr><td>A CO</td><td><span class="badge badge-green">091845Z</span></td><td><span class="badge badge-green">091847Z</span></td></tr>
-                  <tr><td>B CO</td><td><span class="badge badge-green">091845Z</span></td><td><span class="badge badge-green">091851Z</span></td></tr>
-                  <tr><td>C CO</td><td><span class="badge badge-green">091845Z</span></td><td><span class="badge badge-amber">PENDING</span></td></tr>
-                  <tr><td>A BTY 2-17 FA</td><td><span class="badge badge-green">091845Z</span></td><td><span class="badge badge-green">091849Z</span></td></tr>
-                  <tr><td>172 EN CO(-)</td><td><span class="badge badge-green">091845Z</span></td><td><span class="badge badge-amber">PENDING</span></td></tr>
-                  <tr><td>BSB / S4</td><td><span class="badge badge-green">091845Z</span></td><td><span class="badge badge-green">091852Z</span></td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TOOL: Planning Timeline (modal-style card) -->
-    <div class="page" id="page-timeline">
-      <div class="page-header">
-        <div><div class="page-title">PLANNING TIMELINE</div><div class="page-subtitle">1/3 — 2/3 rule applied — CDR has first 24hrs, subordinates have remaining 48hrs</div></div>
-        <button class="ai-assist-btn" onclick="aiAssist('optimize-timeline')">&#9651; AI OPTIMIZE</button>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">PLANNING TIMELINE — OP IRON SENTINEL (D-3 to D+0)</span></div>
-        <div class="card-body">
-          <div class="timeline">
-            <div class="tl-item"><div class="tl-left"><div class="tl-time">D-3 0800</div><div class="tl-dot"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-title">Mission Receipt <span class="badge badge-green">DONE</span></div><div class="tl-body">BN CDR and staff receive BCT WARNORD. CDR initial guidance issued. Reconstitute staff.</div></div></div>
-            <div class="tl-item"><div class="tl-left"><div class="tl-time">D-3 1000</div><div class="tl-dot"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-title">WARNORD #1 to Subordinates <span class="badge badge-green">DONE</span></div><div class="tl-body">Issue WARNORD covering mission, timeline, initial movements. Start subordinate planning.</div></div></div>
-            <div class="tl-item"><div class="tl-left"><div class="tl-time">D-3 1200</div><div class="tl-dot" style="background:var(--accent2)"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-title">Mission Analysis Complete <span class="badge badge-amber">IN PROGRESS</span></div><div class="tl-body">MA brief to CDR. CDR approves restated mission, issues CCIR and initial guidance for COA dev.</div></div></div>
-            <div class="tl-item"><div class="tl-left"><div class="tl-time">D-2 1800</div><div class="tl-dot" style="border-color:var(--muted);background:none"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-title">COA Development Complete</div><div class="tl-body">Staff develops and screens 2+ COAs. COA sketches produced. Prepare wargame setup.</div></div></div>
-            <div class="tl-item"><div class="tl-left"><div class="tl-time">D-2 2000</div><div class="tl-dot" style="border-color:var(--muted);background:none"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-title">WARNORD #2 — Task Org, CS Attachments</div><div class="tl-body">Issue updated WARNORD with task organization, CS/CSS attachments, and tentative timeline.</div></div></div>
-            <div class="tl-item"><div class="tl-left"><div class="tl-time">D-1 0800</div><div class="tl-dot" style="border-color:var(--muted);background:none"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-title">COA Analysis (Wargame)</div><div class="tl-body">Wargame all COAs. Record DPs, synchronization gaps, branch/sequel triggers.</div></div></div>
-            <div class="tl-item"><div class="tl-left"><div class="tl-time">D-1 1400</div><div class="tl-dot" style="border-color:var(--muted);background:none"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-title">Decision Brief to CDR</div><div class="tl-body">Staff comparison and recommendation. CDR approves COA. Issues modified CDR intent.</div></div></div>
-            <div class="tl-item"><div class="tl-left"><div class="tl-time">D-1 1600</div><div class="tl-dot" style="border-color:var(--muted);background:none"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-title">WARNORD #3 — Selected COA</div><div class="tl-body">Issue WARNORD with selected COA. Subordinates refine plans. Begin orders production.</div></div></div>
-            <div class="tl-item"><div class="tl-left"><div class="tl-time">D+0 0000</div><div class="tl-dot" style="border-color:var(--muted);background:none"></div><div class="tl-line"></div></div><div class="tl-content"><div class="tl-title">OPORD Issued</div><div class="tl-body">Full OPORD to all subordinates. Complete rehearsals. Issue DA-form fire support and sustainment annexes.</div></div></div>
-            <div class="tl-item"><div class="tl-left"><div class="tl-time">D+0 0200</div><div class="tl-dot" style="border-color:var(--muted);background:none"></div><div class="tl-line" style="display:none"></div></div><div class="tl-content"><div class="tl-title">SP Time / Movement to LD</div><div class="tl-body">Units cross SP. Movement to LD. H-Hour = 0400L. EMCON DELTA begins H-4.</div></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TOOL: Risk Assessment -->
-    <div class="page" id="page-risk">
-      <div class="page-header">
-        <div><div class="page-title">RISK ASSESSMENT</div><div class="page-subtitle">Deliberate risk management — identify, assess, and mitigate operational risks</div></div>
-        <button class="ai-assist-btn" onclick="aiAssist('risk-full')">&#9651; AI FULL RISK ANALYSIS</button>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Risk Matrix</span></div>
-          <div class="card-body">
-            <div style="font-size:9px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Probability →</div>
-            <div class="risk-grid">
-              <div></div>
-              <div style="font-size:9px;color:var(--muted);padding:4px;text-align:center">UNLIKELY</div>
-              <div style="font-size:9px;color:var(--muted);padding:4px;text-align:center">SELDOM</div>
-              <div style="font-size:9px;color:var(--muted);padding:4px;text-align:center">OCCASIONAL</div>
-              <div style="font-size:9px;color:var(--muted);padding:4px;text-align:center">LIKELY</div>
-              <div class="risk-label">CATASTROPHIC</div><div class="risk-cell r-high">HIGH</div><div class="risk-cell r-extreme r-sel" title="ADA threat to aviation">EXT</div><div class="risk-cell r-extreme">EXT</div><div class="risk-cell r-extreme">EXT</div>
-              <div class="risk-label">CRITICAL</div><div class="risk-cell r-med">MED</div><div class="risk-cell r-high">HIGH</div><div class="risk-cell r-extreme r-sel" title="Armor counterattack">EXT</div><div class="risk-cell r-extreme">EXT</div>
-              <div class="risk-label">MARGINAL</div><div class="risk-cell r-low">LOW</div><div class="risk-cell r-med">MED</div><div class="risk-cell r-high r-sel" title="Logistics split">HIGH</div><div class="risk-cell r-high">HIGH</div>
-              <div class="risk-label">NEGLIGIBLE</div><div class="risk-cell r-low">LOW</div><div class="risk-cell r-low">LOW</div><div class="risk-cell r-low">LOW</div><div class="risk-cell r-med">MED</div>
-            </div>
-            <div style="margin-top:8px;font-size:9px;color:var(--muted)">&#9632; Selected risks highlighted</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Risk Register</span><div class="card-actions"><button class="btn-sm btn-primary" onclick="aiAssist('risk-mitigate')">AI Mitigate</button></div></div>
-          <div class="card-body">
-            <table>
-              <thead><tr><th>#</th><th>HAZARD</th><th>RISK</th><th>CONTROL</th><th>RESIDUAL</th></tr></thead>
-              <tbody>
-                <tr><td>1</td><td>ADA threat to air assault</td><td><span class="badge badge-red">EXT</span></td><td>SEAD H-30min prior; alternate LZ</td><td><span class="badge badge-amber">HIGH</span></td></tr>
-                <tr><td>2</td><td>Enemy armor counterattack</td><td><span class="badge badge-red">EXT</span></td><td>ISR on AXIS BEAR; CAS on-call; BDE reserve</td><td><span class="badge badge-amber">MOD</span></td></tr>
-                <tr><td>3</td><td>Split logistics / BSB</td><td><span class="badge badge-amber">HIGH</span></td><td>FARP established H-2; 96hr pre-positioned</td><td><span class="badge badge-green">LOW</span></td></tr>
-                <tr><td>4</td><td>Weather — aviation ceiling</td><td><span class="badge badge-amber">HIGH</span></td><td>Branch to COA 1 if wx below minimums at H-4</td><td><span class="badge badge-amber">MOD</span></td></tr>
-                <tr><td>5</td><td>Bridge MLC failure (logistics)</td><td><span class="badge badge-amber">MOD</span></td><td>EN Co reconnoiters NLT D-2; ferry plan</td><td><span class="badge badge-green">LOW</span></td></tr>
-              </tbody>
-            </table>
-            <div style="margin-top:10px;padding:8px;background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.3);border-radius:2px;font-size:10px;color:var(--amber)">
-              Overall Risk: <strong>HIGH</strong> — Residual risk after controls: <strong>MODERATE</strong>. CDR accepts risk IAW mission requirement.
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </main><!-- /#main -->
-
-  <!-- ── AI ASSISTANT PANEL ─────────────────────────────────────── -->
-  <aside id="aipanel">
-    <div class="ai-header">
-      <div class="ai-title"><div class="ai-dot"></div>AI PLANNING ASSISTANT</div>
-      <span class="badge badge-green" style="font-size:9px">ONLINE</span>
-    </div>
-    <div class="ai-messages" id="ai-messages">
-      <div class="ai-msg">
-        <div class="ai-msg-header">SYSTEM — 091730Z</div>
-        <div class="ai-bubble system">OP IRON SENTINEL planning session initialized. Current step: Mission Analysis. Classification: SECRET//NOFORN.</div>
-      </div>
-      <div class="ai-msg">
-        <div class="ai-msg-header">AI ASSISTANT — 091730Z</div>
-        <div class="ai-bubble assistant">I'm ready to support your MDMP planning for OP IRON SENTINEL. You're currently in Step 2 (Mission Analysis). I can help you complete METT-TC, generate IPB products, identify CCIR, draft the Mission Analysis brief, or prepare for COA development. What do you need?</div>
-      </div>
-    </div>
-    <div class="ai-quick-prompts" id="quick-prompts">
-      <div class="ai-quick-label">Quick Actions</div>
-      <button class="quick-btn" onclick="sendQuick('Complete the METT-TC analysis for the current operation')">Complete METT-TC analysis</button>
-      <button class="quick-btn" onclick="sendQuick('Identify and prioritize CCIR for Mission Analysis brief')">Generate &amp; prioritize CCIR</button>
-      <button class="quick-btn" onclick="sendQuick('Identify synchronization gaps and recommend mitigations')">Find sync gaps</button>
-    </div>
-    <div class="ai-input-area">
-      <textarea class="ai-input" id="ai-input" placeholder="Ask the AI planning assistant..." rows="2" onkeydown="handleKey(event)"></textarea>
-      <button class="ai-send" id="ai-send-btn" onclick="sendMessage()">SEND</button>
-    </div>
-  </aside>
+  </div>
+  <div id="tl-track"><div id="tl-inner"></div></div>
+</div>
 
 </div><!-- /#app -->
-
 <script>
-/* ─── CLOCK ─────────────────────────────────────────────── */
-function updateClock() {
-  const now = new Date();
-  const h = String(now.getUTCHours()).padStart(2,'0');
-  const m = String(now.getUTCMinutes()).padStart(2,'0');
-  const s = String(now.getUTCSeconds()).padStart(2,'0');
-  document.getElementById('clock').textContent = `${h}${m}${s}Z`;
+/* ═══════════════════════════════════════════════
+   CLOCK
+═══════════════════════════════════════════════ */
+function tick(){
+  const n=new Date(),p=v=>String(v).padStart(2,'0');
+  document.getElementById('clock').textContent=`${p(n.getUTCDate())}${p(n.getUTCHours())}${p(n.getUTCMinutes())}Z`;
 }
-updateClock();
-setInterval(updateClock, 1000);
+tick();setInterval(tick,1000);
 
-/* ─── STEP NAVIGATION ────────────────────────────────────── */
-const stepToPage = [0,1,2,3,4,5,6];
-let currentStep = 1;
+/* ═══════════════════════════════════════════════
+   MAP
+═══════════════════════════════════════════════ */
+window.map=L.map('map',{zoomControl:true,attributionControl:true});
+L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
+  maxZoom:16,attribution:'© OpenTopoMap'
+}).addTo(map);
+map.setView([46.520,13.020],12);
 
-function goStep(step) {
-  currentStep = step;
-  // Update sidebar
-  document.querySelectorAll('.mdmp-step').forEach((el, i) => {
-    el.classList.remove('active');
-    if (i === step) el.classList.add('active');
-  });
-  // Show correct page
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const pg = document.getElementById('page-' + step);
-  if (pg) pg.classList.add('active');
-  // Update quick prompts
-  updateQuickPrompts(step);
-}
-
-function openTool(tool) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.mdmp-step').forEach(el => el.classList.remove('active'));
-  const pg = document.getElementById('page-' + tool);
-  if (pg) pg.classList.add('active');
-}
-
-function updateQuickPrompts(step) {
-  const prompts = {
-    0: [
-      ['Analyze HHQ order and extract implied tasks', 'Analyze the HHQ order and identify all specified, implied, and essential tasks'],
-      ['Generate restated mission statement', 'Generate a restated mission statement in SMEWTT format'],
-      ['Draft WARNORD #1', 'Draft a Warning Order based on the mission receipt']
-    ],
-    1: [
-      ['Complete METT-TC analysis', 'Complete the METT-TC analysis for the current operation'],
-      ['Generate CCIR / PIR list', 'Identify and prioritize CCIR for Mission Analysis brief'],
-      ['Build IPB threat analysis', 'Build an Intelligence Preparation of the Battlefield threat analysis']
-    ],
-    2: [
-      ['Generate two viable COAs', 'Develop two viable and distinguishable Courses of Action for this operation'],
-      ['Screen COAs for validity', 'Screen the developed COAs against AASLT-F validity criteria'],
-      ['Build synchronization matrix', 'Build a synchronization matrix comparing both COAs across warfighting functions']
-    ],
-    3: [
-      ['Run wargame on selected COA', 'Run a detailed wargame on the selected COA, identifying decision points'],
-      ['Identify synchronization gaps', 'Identify synchronization gaps and recommend mitigations'],
-      ['Develop branch/sequel triggers', 'Develop branch plan triggers and sequel conditions for the operation']
-    ],
-    4: [
-      ['Recommend COA weights', 'Suggest evaluation criteria weights for the decision matrix based on CDR guidance'],
-      ['AI recommend best COA', 'Based on the decision matrix, recommend the best COA with reasoning'],
-      ['Summarize COA comparison for CDR', 'Summarize the COA comparison for the Commander decision brief']
-    ],
-    5: [
-      ['Build Commander decision brief', 'Build a complete Commander decision brief for COA approval'],
-      ['Generate WARNORD #3', 'Generate Warning Order #3 based on the approved COA'],
-      ['Identify remaining planning gaps', 'Identify any remaining planning gaps before orders production']
-    ],
-    6: [
-      ['Generate full OPORD', 'Generate a complete 5-paragraph OPORD for OP IRON SENTINEL'],
-      ['Validate order completeness', 'Validate the OPORD for completeness and doctrinal compliance'],
-      ['Draft missing annexes', 'Draft the remaining incomplete annexes (C, E, G)']
-    ]
-  };
-  const qp = document.getElementById('quick-prompts');
-  const data = prompts[step] || prompts[1];
-  qp.innerHTML = `<div class="ai-quick-label">Quick Actions — Step ${step+1}</div>`;
-  data.forEach(([label, prompt]) => {
-    const btn = document.createElement('button');
-    btn.className = 'quick-btn';
-    btn.textContent = label;
-    btn.onclick = () => sendQuick(prompt);
-    qp.appendChild(btn);
-  });
-}
-
-/* ─── AI CHAT ────────────────────────────────────────────── */
-const AI_RESPONSES = {
-  'full-mettc': `Running full METT-TC analysis for OP IRON SENTINEL...\n\nMISSION: Essential task identified — seize and clear OBJ EAGLE NLT D+3. Implied tasks added: establish ISR coverage AXIS BEAR, coordinate SEAD prior to air assault.\n\nENEMY: Confidence HIGH on MLCOA (defend in depth, 65%). MDCOA (armor counterattack) remains most dangerous — address with RQ-7B coverage and CAS on-call.\n\nTERRAIN: RIDGE ALPHA is KEY terrain — whoever holds it dominates OBJ EAGLE. Recommend AA2 route verification NLT D-2. WADIS passability for dismounted needs physical recon.\n\nTROOPS: Ratio 1.8:1 below doctrinal 3:1. Must achieve local superiority at point of penetration through mass of fires. Recommend ANGLICO fully integrated.\n\nTIME: 1/3-2/3 rule: CDR planning horizon closes D-2 1200. ⚠️ Subordinate leaders need full 48hrs — issue WARNORD #2 NLT D-2 2000.\n\nCIVIL: HADITHA water treatment plant is critical infrastructure. CA team must be on the ground prior to Phase II. Medical facility at MG 341-889 — add to NOFIRES list.`,
-
-  'ipb': `Building IPB for AO FALCON...\n\nGROUND SITUATION: Enemy 3d MRB(-) has prepared battle positions on dominant terrain. RIDGE ALPHA provides 360° observation and fields of fire covering both approach axes. Key vulnerability: reverse slope north of RIDGE ALPHA is a dead space.\n\nADA THREAT: 2x ZSU-23-4 confirmed vic MG 344-893. Engagement envelope covers LZ FALCON and most of AXIS BLUE. SEAD is mandatory before aviation operations. Window of vulnerability = 15 minutes if ZSUs are active.\n\nARMOR: T-72B platoon in reserve — most likely pre-positioned on reverse slope AXIS BEAR. ISR tasking priority: continuous coverage AXIS BEAR H-6 through H+4.\n\nINTELLIGENCE GAPS REQUIRING COLLECTION:\n1. Exact ZSU position confirmation (RQ-7B task)\n2. Enemy BN CP location (SIGINT + ISR)\n3. Obstacle density along AA2 (ground recon)\n4. Bridge MLC at MG 342-887 (EN recon NLT D-2)`,
-
-  'gen-coa': `Developing COAs for OP IRON SENTINEL...\n\nCOA SCREENING: Both developed COAs (Direct / Turning) are VALID — adequate, acceptable, suitable, feasible, distinguishable, and complete.\n\nAI ASSESSMENT:\n• COA 1 (Direct): Lower risk to logistics, simpler C2. However, canalized approach on AXIS BLUE plays to enemy strength on RIDGE ALPHA. Troop ratio unfavorable.\n\n• COA 2 (Turning): Higher complexity but achieves surprise. Seizing RIDGE ALPHA BEFORE H-Hour collapses the defense geometrically. Recommend this COA with detailed FARP planning and weather branch.\n\nRECOMMENDED ADDITIONAL COA: Hybrid — B Co mounted attack AXIS BLUE as main effort (not feint) if weather grounds aviation. This preserves flexibility as Branch COA and reduces weather dependency of COA 2.\n\nNote: Update WARNORD #2 with task org for 172 EN Co before wargame.`,
-
-  'wargame': `Running AI wargame on COA 2 (Turning Movement)...\n\nCRITICAL FINDINGS:\n\n⚠️ PHASE I VULNERABILITY: A Co infiltration via AA2 takes ~4 hours. If enemy has OP on the WADIS approach, the infiltration will be compromised. Recommend: ISR clear of AA2 NLT H-6, followed by EMCON DELTA.\n\n🔴 DP-1 TRIGGER: ADA suppression window is narrow. If first SEAD volley fails, helicopter flight time (~8 min) means aircraft will be in the engagement envelope before abort order reaches them. Recommend: SEAD begins H-35min (not H-30min) to create a larger buffer.\n\n⚠️ LOGISTICS GAP: C Co air assault creates a resupply problem. All of C Co's Class V (ammunition) must be pre-loaded. No LOGPAC can reach them until AXIS BLUE is open. Recommend: 2x basic loads pre-positioned on aircraft.\n\n✅ PHASE II STRENGTH: Simultaneous pressure from RIDGE ALPHA (A Co) + OBJ EAGLE (C Co air assault) creates a cross-fire effect. Enemy has no covered withdrawal route — this is decisive.\n\nDecision Points confirmed: DP-1 through DP-4 are valid. Recommend adding DP-5: C Co abort criteria if LZ FALCON is hot (enemy on LZ).`,
-
-  'compare-coas': `COA Comparison complete. AI recommendation:\n\nCOA 2 (TURNING MOVEMENT) scores 3.55 vs COA 1 at 2.90.\n\nKEY DIFFERENTIATORS:\n✓ Force protection: COA 2 avoids the canalized AXIS BLUE kill zone.\n✓ Mission: Seizing RIDGE ALPHA first creates conditions for OBJ EAGLE — COA 2 is more likely to achieve decisive results.\n✓ Surprise: COA 2 is unexpected; enemy likely assumes direct approach.\n\nCOA 1 ADVANTAGES (where it wins):\n✓ Logistics: Simpler — no split BSB\n✓ C2: Easier to control one axis\n\nRECOMMENDATION: COA 2 with logistics mitigation (FARP + 2x CL V on aircraft). Present to CDR with COA 1 as branch if weather grounds aviation.\n\nRisk briefing: Overall HIGH, residual MODERATE after controls. CDR acceptance required.`,
-
-  'gen-opord': `Generating OPORD 001-26 (OP IRON SENTINEL)...\n\n✅ SITUATION paragraph complete — enemy/friendly/attachments.\n✅ MISSION paragraph complete — SMEWTT format.\n✅ EXECUTION — CDR intent, concept, tasks to subordinates.\n✅ SUSTAINMENT — logistics, medical, maintenance.\n✅ COMMAND & SIGNAL — succession, PACE plan, reporting.\n\n⚠️ ITEMS FLAGGED FOR REVIEW:\n1. ANGLICO not assigned explicit task in Para 3c — recommend: "ANGLICO coordinates CAS with USAF assets IAW ANNEX D. Request CAS through S3 AIR."\n2. AA2 CASEVAC lacks litter team designation — recommend: 1x litter team from HHC medical plt pre-positioned at MG 341-889.\n3. Annex C (Operations Overlay) and Annex G (Aviation) need completion before issue.\n\nEstimated readiness for issue: 90% complete. Address flagged items, then route for CDR signature.`,
-
-  'validate-opord': `Validating OPORD 001-26...\n\nCOMPLIANCE CHECK:\n✅ 5-paragraph format: Complete\n✅ Mission (SMEWTT): Who, What, When, Where, Why — confirmed\n⚠️ Tasks to subordinates: ANGLICO lacks explicit task — see above\n✅ Fire support: FSCL, NOFIRES (HADITHA 600m), SEAD\n⚠️ CASEVAC: AA2 extraction gap identified\n✅ ROE: Reference to ROE card (Annex I) — valid\n✅ CCIR: Reporting requirements in 3d and 5c\n✅ Decision points: DP-1 through DP-4 in Para 3d\n\nDOCTRINAL COMPLIANCE: FM 6-0, FM 3-21.10 — compliant\nCLASSIFICATION: SECRET//NOFORN — header/footer required on all pages\n\nREADINESS: Fix 2 items, then READY FOR ISSUE.`,
-
-  'risk-full': `Full risk analysis for OP IRON SENTINEL...\n\nRISK SUMMARY (after controls):\n🔴 EXTREME: ADA threat to air assault (pre-control) → HIGH residual after SEAD\n🔴 EXTREME: Enemy armor counterattack (pre-control) → MOD residual with CAS + ISR\n🟡 HIGH: Logistics split → LOW residual with FARP plan\n🟡 HIGH: Weather dependency → MOD residual with COA 1 branch\n🟢 MOD: Bridge MLC → LOW with EN recon\n\nOVERALL RISK DECISION: HIGH → Acceptable given mission priority.\n\nADDITIONAL RISKS IDENTIFIED:\n• Friendly fire risk at OBJ EAGLE (A Co + C Co converging) — recommend recognition signals (VS-17 panels + IR strobes)\n• EMCON DELTA compliance risk if sub-units use comms — enforce at CDR level\n• Civilian contact on AA2 — recommend ROE card refresh for A Co\n\nCDR must formally accept residual risk before OPORD issue.`,
-
-  'ccir-gen': `Generating CCIR for OP IRON SENTINEL Mission Analysis...\n\nPRIOR (Priority Intelligence Requirements):\n1. Has enemy committed armor reserve along AXIS BEAR? (Trigger for DP-2)\n2. Are ZSU-23-4 ADA systems operational and active? (Trigger for DP-1 / SEAD go/no-go)\n3. What is enemy BN CP location? (Enables targeting HVT-01)\n4. Has enemy established OPs on AA2 / WADIS approach? (A Co infiltration risk)\n\nFFIR (Friendly Force Information Requirements):\n1. Can BN seize OBJ EAGLE within 8hrs of H-Hour?\n2. Can A Co complete AA2 infiltration without compromise?\n3. Is HADITHA bridge capable of MLC-70 traffic? (Logistics LOC)\n4. Can BSB sustain 96 hours without resupply?\n\nCDR Critical Information Requirements sorted by priority. Recommend ISR prioritization: PIR-1 and PIR-2 are highest — task RQ-7B accordingly.`,
-
-  'default': `I can help you with this planning task. Could you provide more specific guidance or context? I can analyze the current operational picture, generate planning products, identify gaps in the current plan, or draft specific portions of the OPORD. What's most urgent?`
+const G={          // Layer groups by mode
+  always:L.layerGroup().addTo(map),
+  analyze:L.layerGroup().addTo(map),
+  plan:L.layerGroup(),
+  wargame:L.layerGroup(),
+  order:L.layerGroup()
 };
 
-function aiAssist(key) {
-  const response = AI_RESPONSES[key] || AI_RESPONSES['default'];
-  const input = document.getElementById('ai-input');
-  input.value = '';
-  displayThinking(() => addAIMessage('AI ASSISTANT', response));
+/* ── helpers ── */
+function di(html,size=[40,40],anchor=[20,20]){
+  return L.divIcon({html,className:'',iconSize:size,iconAnchor:anchor});
+}
+function addTo(mode,...layers){layers.forEach(l=>G[mode].addLayer(l));}
+
+/* ── NATO SVGs ── */
+const SYM={
+  inf:`<svg viewBox="0 0 40 28" fill="none" stroke="#93c5fd" stroke-width="2">
+    <rect x="1" y="1" width="38" height="26" rx="1"/>
+    <line x1="1" y1="1" x2="39" y2="27"/><line x1="39" y1="1" x2="1" y2="27"/>
+  </svg>`,
+  arty:`<svg viewBox="0 0 40 28" fill="none" stroke="#93c5fd" stroke-width="2">
+    <rect x="1" y="1" width="38" height="26" rx="1"/>
+    <circle cx="20" cy="14" r="7" fill="rgba(59,130,246,.3)"/>
+  </svg>`,
+  eng:`<svg viewBox="0 0 40 28" fill="none" stroke="#93c5fd" stroke-width="2">
+    <rect x="1" y="1" width="38" height="26" rx="1"/>
+    <rect x="8" y="7" width="24" height="14" rx="1" fill="rgba(59,130,246,.2)"/>
+    <text x="20" y="20" text-anchor="middle" font-size="11" fill="#93c5fd" stroke="none" font-weight="700">E</text>
+  </svg>`,
+  isr:`<svg viewBox="0 0 40 28" fill="none" stroke="#93c5fd" stroke-width="2">
+    <rect x="1" y="1" width="38" height="26" rx="1"/>
+    <path d="M10 14 Q20 4 30 14 Q20 24 10 14Z" fill="rgba(59,130,246,.25)"/>
+  </svg>`,
+};
+
+/* ── Phase lines ── */
+function phaseLine(lat,label,color){
+  const line=L.polyline([[lat,12.85],[lat,13.25]],
+    {color,weight:1.5,dashArray:'7 5',opacity:.75});
+  const mk=L.marker([lat,12.88],{
+    icon:di(`<div class="pl-lbl" style="background:rgba(0,0,0,.65);border:1px solid ${color};color:${color}">${label}</div>`,[80,20],[0,10]),
+    interactive:false
+  });
+  addTo('always',line,mk);
+}
+phaseLine(46.508,'PL AMBER','#f59e0b');
+phaseLine(46.570,'PL COPPER','#10b981');
+
+/* ── Objective EAGLE ── */
+const objEagle=L.marker([46.548,13.055],{
+  icon:di(`<div style="width:26px;height:26px;border:2.5px solid #ef4444;
+    transform:rotate(45deg);background:rgba(239,68,68,.15);
+    box-shadow:0 0 14px rgba(239,68,68,.6);border-radius:2px"></div>`,[26,26],[13,13])
+}).on('click',()=>onFeature('obj'));
+const objLbl=L.marker([46.553,13.055],{
+  icon:di(`<div style="font-size:10px;font-weight:800;color:#ef4444;
+    white-space:nowrap;text-shadow:0 1px 4px #000;letter-spacing:.05em">OBJ EAGLE</div>`,[80,14],[0,14]),
+  interactive:false
+});
+addTo('always',objEagle,objLbl);
+
+/* ── Ridge Alpha ── */
+const ridgeAlpha=L.marker([46.530,13.025],{
+  icon:di(`<div style="width:0;height:0;
+    border-left:13px solid transparent;border-right:13px solid transparent;
+    border-bottom:20px solid #10b981;filter:drop-shadow(0 0 6px rgba(16,185,129,.6))"></div>`,[26,20],[13,20])
+}).on('click',()=>onFeature('ridge'));
+const ridgeLbl=L.marker([46.534,13.025],{
+  icon:di(`<div style="font-size:9px;font-weight:700;color:#10b981;
+    white-space:nowrap;text-shadow:0 1px 3px #000">RIDGE ALPHA</div>`,[90,12],[0,12]),
+  interactive:false
+});
+addTo('always',ridgeAlpha,ridgeLbl);
+
+/* ── Enemy positions ── */
+function enemyBP(lat,lng,id){
+  const m=L.marker([lat,lng],{
+    icon:di(`<div style="width:22px;height:22px;background:#ef4444;
+      border:2px solid #fca5a5;border-radius:2px;display:flex;align-items:center;
+      justify-content:center;font-size:8px;font-weight:800;color:#fff;
+      box-shadow:0 0 12px rgba(239,68,68,.6)">BP</div>`,[22,22],[11,11])
+  }).on('click',()=>onFeature('bp'));
+  const ring=L.circle([lat,lng],{
+    radius:1100,color:'#ef4444',weight:1,dashArray:'5 4',
+    opacity:.45,fill:true,fillColor:'#ef4444',fillOpacity:.04
+  });
+  addTo('always',m);addTo('analyze',ring);
+  return m;
+}
+enemyBP(46.537,13.052,'bp1');
+enemyBP(46.552,13.040,'bp2');
+
+/* Enemy CP */
+const enCP=L.marker([46.560,13.068],{
+  icon:di(`<div style="width:20px;height:20px;background:#7f1d1d;
+    border:2px solid #ef4444;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:8px;font-weight:800;color:#fff;
+    box-shadow:0 0 10px rgba(239,68,68,.5)">CP</div>`,[20,20],[10,10])
+}).on('click',()=>onFeature('cp'));
+addTo('always',enCP);
+
+/* ADA / ZSU */
+const zsuM=L.marker([46.542,13.058],{
+  icon:di(`<div style="width:20px;height:20px;background:rgba(239,68,68,.15);
+    border:2px dashed #ef4444;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:7px;font-weight:800;color:#fca5a5">ADA</div>`,[20,20],[10,10])
+}).on('click',()=>onFeature('ada'));
+const adaRing=L.circle([46.542,13.058],{
+  radius:2500,color:'#ef4444',weight:1.5,dashArray:'8 4',
+  opacity:.55,fill:true,fillColor:'#ef4444',fillOpacity:.04
+});
+addTo('always',zsuM);addTo('analyze',adaRing);
+
+/* ── Routes ── */
+const rBlue=L.polyline([
+  [46.490,12.980],[46.502,12.997],[46.514,13.010],[46.526,13.028],[46.540,13.048],[46.548,13.055]
+],{color:'#3b82f6',weight:2.5,opacity:.75}).on('click',()=>onFeature('rblue'));
+
+const rAA2=L.polyline([
+  [46.490,12.980],[46.498,12.988],[46.510,13.002],[46.519,13.012],[46.530,13.025]
+],{color:'#10b981',weight:2,opacity:.65,dashArray:'9 5'}).on('click',()=>onFeature('raa2'));
+
+function routeLabel(lat,lng,html,anchor=[50,0]){
+  return L.marker([lat,lng],{
+    icon:di(`<div style="font-size:9px;background:rgba(0,0,0,.7);padding:2px 6px;
+      border-radius:3px;white-space:nowrap;${html.style||''}">${html.text}</div>`,
+      [120,16],anchor),
+    interactive:false
+  });
+}
+const rBlueLbl=L.marker([46.513,13.007],{
+  icon:di(`<div style="font-size:9px;color:#93c5fd;background:rgba(0,0,0,.7);
+    padding:2px 7px;border-radius:3px;border:1px solid rgba(59,130,246,.4);white-space:nowrap">AA1 · ROUTE BLUE</div>`,[130,16],[65,0]),
+  interactive:false
+});
+const rAA2Lbl=L.marker([46.504,12.993],{
+  icon:di(`<div style="font-size:9px;color:#6ee7b7;background:rgba(0,0,0,.7);
+    padding:2px 7px;border-radius:3px;border:1px solid rgba(16,185,129,.4);white-space:nowrap">AA2 · WADIS (dismounted)</div>`,[150,16],[75,0]),
+  interactive:false
+});
+addTo('always',rBlue,rBlueLbl,rAA2,rAA2Lbl);
+
+/* ── LZ markers ── */
+function lzMarker(lat,lng,name){
+  const m=L.marker([lat,lng],{
+    icon:di(`<div style="width:22px;height:22px;border:2px solid rgba(255,255,255,.8);
+      border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;
+      justify-content:center;font-size:9px;font-weight:800;color:#fff;
+      box-shadow:0 0 10px rgba(255,255,255,.3)">H</div>`,[22,22],[11,11])
+  }).on('click',()=>onFeature('lz',{name}));
+  const lbl=L.marker([lat+.002,lng],{
+    icon:di(`<div style="font-size:9px;color:rgba(255,255,255,.7);
+      text-shadow:0 1px 3px #000;white-space:nowrap">LZ ${name}</div>`,[70,12],[0,12]),
+    interactive:false
+  });
+  addTo('plan',m,lbl);addTo('order',m,lbl);
+}
+lzMarker(46.545,13.042,'FALCON');
+lzMarker(46.540,13.035,'HAWK');
+
+/* staging marker */
+const stagingM=L.marker([46.490,12.980],{
+  icon:di(`<div style="width:18px;height:18px;background:#1d4ed8;
+    border:2px solid #93c5fd;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:8px;color:#fff;font-weight:700">SP</div>`,[18,18],[9,9])
+});
+addTo('always',stagingM);
+
+/* ═══════════════════════════════════════════════
+   UNITS
+═══════════════════════════════════════════════ */
+const UNITS=[
+  {id:'aco', name:'A CO',  sub:'2-14 IN · 120 PAX',   type:'inf',  placed:false},
+  {id:'bco', name:'B CO',  sub:'2-14 IN · 110 PAX',   type:'inf',  placed:false},
+  {id:'cco', name:'C CO',  sub:'Air Assault · 105 PAX',type:'inf',  placed:false},
+  {id:'artb',name:'A BTY', sub:'2-17 FA · 6× M109A7', type:'arty', placed:false},
+  {id:'enco',name:'172 EN',sub:'Combat Engineer',      type:'eng',  placed:false},
+  {id:'isr', name:'ISR Plt',sub:'2× RQ-7B Shadow',   type:'isr',  placed:false},
+];
+const placedMarkers={};
+
+/* ═══════════════════════════════════════════════
+   MODES
+═══════════════════════════════════════════════ */
+const INTEL_ITEMS=[
+  {ico:'🔴',name:'Enemy BP ×2',sub:'Confirmed — RIDGE ALPHA fwd slope'},
+  {ico:'🔴',name:'ZSU-23-4 ADA',sub:'2× confirmed, vic MG 344-893'},
+  {ico:'🟡',name:'Armor Reserve',sub:'Estimated — AXIS BEAR'},
+  {ico:'🟡',name:'Enemy BN CP',  sub:'Vic MG 346-893, unconfirmed'},
+  {ico:'⚪',name:'EW/Jam Node',  sub:'Unconfirmed — possible MG 347-890'},
+];
+const DP_ITEMS=[
+  {ico:'🔴',name:'DP-1',sub:'ADA active 30min post-SEAD → Branch COA 1'},
+  {ico:'🟡',name:'DP-2',sub:'Armor on AXIS BEAR → CAS + B CO screen'},
+  {ico:'🟢',name:'DP-3',sub:'C CO SECURE report → exploit PL COPPER'},
+  {ico:'🔴',name:'DP-4',sub:'RIDGE ALPHA lost → request BDE reserve'},
+];
+const ORDER_ITEMS=[
+  {ico:'✅',name:'A CO',  sub:'Infiltrate AA2 → seize RIDGE ALPHA H-1'},
+  {ico:'✅',name:'B CO',  sub:'Feint AXIS BLUE → fix enemy BPs'},
+  {ico:'✅',name:'C CO',  sub:'Air assault LZ FALCON → seize OBJ EAGLE'},
+  {ico:'✅',name:'A BTY', sub:'SEAD H-35min → PREP OBJ EAGLE H-15min'},
+  {ico:'✅',name:'172 EN',sub:'AA2 route clearance → breach PL AMBER'},
+];
+
+let currentMode='analyze';
+
+function setMode(m){
+  currentMode=m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
+  ['analyze','plan','wargame','order'].forEach(k=>{
+    if(map.hasLayer(G[k]))map.removeLayer(G[k]);
+  });
+  if(G[m])G[m].addTo(map);
+  renderLP(m);renderQuick(m);
+  const info={
+    analyze:'Analyze mode — map shows enemy disposition and ADA coverage. Click any element for AI analysis.',
+    plan:'Plan mode — drag unit blocks from the left panel onto the map to position forces. LZ markers are now visible.',
+    wargame:'Wargame mode — review decision points. Play the timeline to step through phases. Click a DP for branch analysis.',
+    order:'Order mode — approved COA 2 loaded. I can generate the full OPORD or any annex on request.',
+  };
+  aiMsg(info[m],'ai');
 }
 
-function sendQuick(prompt) {
-  addAIMessage('PLANNER', prompt, 'user');
-  const response = matchResponse(prompt);
-  displayThinking(() => addAIMessage('AI ASSISTANT', response));
+function renderLP(mode){
+  document.getElementById('lp-head').textContent=
+    {analyze:'Intelligence',plan:'Force Pool — Drag to Map',wargame:'Decision Points',order:'Task Organization'}[mode];
+  const b=document.getElementById('lp-body');
+  if(mode==='plan'){
+    b.innerHTML=UNITS.map(u=>`
+      <div class="ucard ${u.placed?'placed':''}" id="uc-${u.id}"
+        draggable="${!u.placed}" ondragstart="uDrag(event,'${u.id}')">
+        <div class="nato">${SYM[u.type]||SYM.inf}</div>
+        <div class="ucard-name">${u.name}</div>
+        <div class="ucard-sub">${u.sub}</div>
+      </div>`).join('');
+  }else if(mode==='analyze'){
+    b.innerHTML=INTEL_ITEMS.map(i=>`
+      <div class="list-item" onclick="onFeature('intel',{n:'${i.name}'})">
+        <div class="list-item-ico">${i.ico}</div>
+        <div><div class="list-item-name">${i.name}</div><div class="list-item-sub">${i.sub}</div></div>
+      </div>`).join('');
+  }else if(mode==='wargame'){
+    b.innerHTML=DP_ITEMS.map(d=>`
+      <div class="list-item" onclick="onFeature('dp',{n:'${d.name}'})">
+        <div class="list-item-ico">${d.ico}</div>
+        <div><div class="list-item-name">${d.name}</div><div class="list-item-sub">${d.sub}</div></div>
+      </div>`).join('');
+  }else{
+    b.innerHTML=ORDER_ITEMS.map(o=>`
+      <div class="list-item" style="cursor:default;border-color:rgba(16,185,129,.2);background:rgba(16,185,129,.04)">
+        <div class="list-item-ico">${o.ico}</div>
+        <div><div class="list-item-name">${o.name}</div><div class="list-item-sub">${o.sub}</div></div>
+      </div>`).join('');
+  }
 }
 
-function sendMessage() {
-  const input = document.getElementById('ai-input');
-  const text = input.value.trim();
-  if (!text) return;
-  addAIMessage('PLANNER', text, 'user');
-  input.value = '';
-  const response = matchResponse(text);
-  displayThinking(() => addAIMessage('AI ASSISTANT', response));
+/* ═══════════════════════════════════════════════
+   DRAG & DROP UNITS → MAP
+═══════════════════════════════════════════════ */
+function uDrag(e,id){e.dataTransfer.setData('uid',id);e.dataTransfer.effectAllowed='copy';}
+const mapEl=document.getElementById('map');
+const mapWrap=document.getElementById('map-wrap');
+mapEl.addEventListener('dragover',e=>{e.preventDefault();mapWrap.classList.add('drop-active');});
+mapEl.addEventListener('dragleave',()=>mapWrap.classList.remove('drop-active'));
+mapEl.addEventListener('drop',e=>{
+  e.preventDefault();mapWrap.classList.remove('drop-active');
+  const id=e.dataTransfer.getData('uid');if(!id)return;
+  const rect=mapEl.getBoundingClientRect();
+  const ll=map.containerPointToLatLng(L.point(e.clientX-rect.left,e.clientY-rect.top));
+  placeUnit(id,ll);
+});
+
+function placeUnit(id,ll){
+  const u=UNITS.find(x=>x.id===id);
+  if(!u||u.placed)return;
+  u.placed=true;
+  const icon=di(`<div class="mu">
+    <div class="mu-sym">${SYM[u.type]||SYM.inf}</div>
+    <div class="mu-lbl">${u.name}</div>
+  </div>`,[40,42],[20,42]);
+  const mk=L.marker(ll,{icon,draggable:true}).addTo(map);
+  mk.on('click',()=>onFeature('funit',{u}));
+  placedMarkers[id]=mk;
+  const card=document.getElementById('uc-'+id);
+  if(card){card.classList.add('placed');card.draggable=false;}
+  const tips={
+    aco:'A CO placed. Best suited for the AA2 infiltration — 6km to RIDGE ALPHA, est 4hr movement. Recommend assigning 172 EN for route obstacle clearance.',
+    bco:'B CO placed. Position for the AXIS BLUE feint to fix enemy BPs. Coordinate with A BTY for suppression fires before advancing past PL AMBER.',
+    cco:'C CO (Air Assault) placed. Verify LZ FALCON is within 8km. SEAD must precede by 35min — abort threshold: ADA active at DP-1.',
+    artb:'A BTY placed. Check firing fans clear of 600m NOFIRES around HADITHA. Can suppress RIDGE ALPHA BPs and conduct SEAD on ZSU-23-4 from this position.',
+    enco:'172 EN placed. Primary tasks: AA2 route clearance, PL AMBER breach, bridge recon MG 342-887. Task-organize to A CO for Phase I.',
+    isr:'ISR Plt placed. Task RQ-7B-1: continuous coverage AXIS BEAR (MDCOA trigger). RQ-7B-2: AA2 route confirmation NLT H-6. EMCON considered.',
+  };
+  thinking(()=>aiMsg(tips[id]||`${u.name} positioned. Ask me for task analysis or route guidance.`,'ai'));
 }
 
-function matchResponse(text) {
-  const t = text.toLowerCase();
-  if (t.includes('mett') || t.includes('terrain') || t.includes('enemy analysis')) return AI_RESPONSES['full-mettc'];
-  if (t.includes('ipb') || t.includes('intelligence prep')) return AI_RESPONSES['ipb'];
-  if (t.includes('coa') && t.includes('develop')) return AI_RESPONSES['gen-coa'];
-  if (t.includes('wargam')) return AI_RESPONSES['wargame'];
-  if (t.includes('compar') || t.includes('recommend') && t.includes('coa')) return AI_RESPONSES['compare-coas'];
-  if (t.includes('opord') || t.includes('order')) return AI_RESPONSES['gen-opord'];
-  if (t.includes('validat')) return AI_RESPONSES['validate-opord'];
-  if (t.includes('risk')) return AI_RESPONSES['risk-full'];
-  if (t.includes('ccir') || t.includes('pir') || t.includes('ffir')) return AI_RESPONSES['ccir-gen'];
-  if (t.includes('sync') && t.includes('gap')) return AI_RESPONSES['wargame'];
-  if (t.includes('timeline') || t.includes('1/3')) return `Planning timeline is optimal at current pace. Key risk: Mission Analysis brief must complete NLT D-3 1200 to preserve subordinate planning time. You have ${Math.floor(Math.random()*4)+2} hours before WARNORD #2 deadline. Priority action: finalize CCIR with CDR before MA brief.`;
-  if (t.includes('warnord') || t.includes('warning order')) return `WARNORD #2 draft ready. Key elements:\n1. Mission (updated per MA)\n2. Task organization: A Btry 2-17 FA ATTACHED, 172 EN Co(-) ATTACHED, ISR Plt OPCON\n3. Movement instructions: Units move to Assembly Area THUNDER NLT D-2 1800\n4. Sustainment: BSB establishes LOG base IRON at MG 337-883\n5. Next update: WARNORD #3 after COA approval\n\nReady to format as official WARNORD?`;
-  return `Analyzing your request for OP IRON SENTINEL...\n\nBased on current planning status (Step ${currentStep + 1}), I recommend focusing on: ${['completing Mission Analysis and issuing WARNORD #2', 'finalizing COA sketches and preparing for wargame', 'conducting wargame and identifying decision points', 'completing decision matrix and preparing CDR brief', 'issuing OPORD and beginning subordinate rehearsals'][Math.min(currentStep, 4)]}.\n\nIs there a specific product or analysis you need right now?`;
+/* ═══════════════════════════════════════════════
+   FEATURE CLICK → AI
+═══════════════════════════════════════════════ */
+const FEAT={
+  obj:`**OBJ EAGLE** (MG 342891)\n\nPrimary objective. Est 1 platoon defending with mutual support from RIDGE ALPHA BPs. ADA coverage makes direct air approach high-risk until suppressed.\n\nSeize sequence: RIDGE ALPHA → OBJ EAGLE simultaneously. LZ FALCON 600m north — short exposure window after SEAD.`,
+  ridge:`**RIDGE ALPHA** — Decisive Terrain\n\nDominates observation and fires across entire AO. Controls both approach axes and OBJ EAGLE. This is the most critical terrain feature in the operation.\n\nA CO must seize RIDGE ALPHA NLT H-1 to enable the simultaneous air assault. Loss of RIDGE ALPHA triggers DP-4 — request BDE reserve.`,
+  bp:`**Enemy Battle Position** — HIGH THREAT\n\nBMP-2 platoon in prepared fighting positions. Pre-planned fires cover ROUTE BLUE. Direct engagement risk to any force approaching on AA1.\n\nA BTY suppresses BPs H-30min prior. B CO feint draws fire before A CO flanks via RIDGE ALPHA. Do not advance B CO past PL AMBER without suppression confirmation.`,
+  cp:`**Enemy BN Command Post** — HVT-01\n\nHigh-value target. Destruction disrupts enemy C2 and may trigger premature withdrawal or disorganized counterattack.\n\nOptions: A BTY long-range fires (range check required), CAS via ANGLICO (SEAD first), or exploitation target post-seizure of OBJ EAGLE. Coordinate fires with BCT — target is beyond PL COPPER.`,
+  ada:`**ZSU-23-4 ADA System** — CRITICAL\n\n2× systems confirmed. Engagement envelope shown on map (2.5km radius). Aviation is non-survivable within this ring until suppressed.\n\nSEAD plan: A BTY fires HPT-02 at H-35min. Window: 15-20min of effective suppression needed. DP-1 abort threshold: ADA still active at H-3. Branch to COA 1 (ground approach only).`,
+  rblue:`**AA1 — ROUTE BLUE**\n\nMechanized avenue of approach. Good for B CO feint. Risk: canalized terrain — enemy BPs have pre-planned indirect fires on this axis.\n\nEN recon required to confirm bridge MLC-70 capacity at MG 342-887. Do not commit B CO past PL AMBER until suppression fires are confirmed on BP1 and BP2.`,
+  raa2:`**AA2 — WADIS TRAIL** (dismounted)\n\nProvides covered, concealed approach to RIDGE ALPHA. Key risk: possible enemy OP on WADIS approach.\n\nISR must confirm route clear NLT H-6. EMCON DELTA for A CO from H-6. Obstacle likely at MG 341-001 — EN Co leads with breach kit. 4hr movement plan for A CO.`,
+  lz:(d)=>`**LZ ${d.name}**\n\nHelicopter landing zone. High-risk exposure window during approach and touchdown. ADA must be suppressed before insertion.\n\nC CO brief: abort criteria if LZ is hot (enemy contact on LZ). Alternate: LZ HAWK pre-briefed. Deception plan: initial approach to LZ HAWK, then redirect to LZ FALCON.`,
+  funit:(d)=>`**${d.u.name}** positioned on map.\n\nUnit: ${d.u.sub}. Marker is draggable — reposition as needed.\n\nI can generate:\n• Detailed task assignment\n• Movement plan to objective\n• Logistics requirements\n• Coordination matrix\n\nWhat do you need for ${d.u.name}?`,
+  intel:(d)=>`**${d.n}** — Intelligence element.\n\nThis asset requires ISR collection to confirm. Recommend: task RQ-7B to confirm exact location NLT H-6. Add to HPT list and assign to fires annex. Click the ZSU or BP markers on the map for detailed threat assessments.`,
+  dp:(d)=>`**${d.n}** — Decision Point.\n\nThis is a critical branch trigger. Commander must monitor the associated indicator and be prepared to execute the branch plan within the decision window.\n\nAsk me to generate the full branch plan or detail the specific triggers and CDR actions for this DP.`,
+};
+
+function onFeature(key,data){
+  let r=FEAT[key];
+  if(typeof r==='function')r=r(data);
+  if(r)thinking(()=>aiMsg(r,'ai'));
 }
 
-function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+/* ═══════════════════════════════════════════════
+   AI CHAT
+═══════════════════════════════════════════════ */
+const QUICK={
+  analyze:[
+    ['Enemy assessment','Give me a full enemy assessment — composition, disposition, and most dangerous COA'],
+    ['IPB summary','Summarize the Intelligence Preparation of the Battlefield for this operational area'],
+    ['Key terrain analysis','Identify and prioritize all key terrain in the AO'],
+  ],
+  plan:[
+    ['Recommend COA','Recommend the best COA for seizing OBJ EAGLE given current enemy disposition'],
+    ['Force allocation','How should I allocate the available forces across the two COAs?'],
+    ['Fires plan','Generate a preliminary fires plan covering SEAD, prep fires, and CAS coordination'],
+  ],
+  wargame:[
+    ['Run wargame','Walk me through the wargame for COA 2 phase by phase'],
+    ['Identify risks','What are the highest-risk decision points and recommended mitigations?'],
+    ['Branch plan DP-1','Generate the branch plan if DP-1 triggers — ADA not suppressed, abort air assault'],
+  ],
+  order:[
+    ['Generate OPORD','Generate the 5-paragraph OPORD for OP IRON SENTINEL'],
+    ['Annex B — Intel','Draft Annex B Intelligence for the OPORD'],
+    ['Subordinate tasks','Generate the complete task list for each subordinate unit'],
+  ],
+};
+
+function renderQuick(mode){
+  const c=document.getElementById('ai-quick');
+  c.innerHTML=(QUICK[mode]||[]).map(([l,p])=>
+    `<button class="aq-btn" onclick="sendQ('${p.replace(/'/g,"\\'")}')">→ ${l}</button>`
+  ).join('');
 }
 
-let thinkingEl = null;
-function displayThinking(callback) {
-  const btn = document.getElementById('ai-send-btn');
-  btn.disabled = true;
-  const msgs = document.getElementById('ai-messages');
-  thinkingEl = document.createElement('div');
-  thinkingEl.className = 'ai-thinking';
-  thinkingEl.innerHTML = '<div class="dot-pulse"></div><div class="dot-pulse"></div><div class="dot-pulse"></div>';
-  msgs.appendChild(thinkingEl);
-  msgs.scrollTop = msgs.scrollHeight;
-  setTimeout(() => {
-    if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
-    btn.disabled = false;
-    callback();
-  }, 1200 + Math.random() * 800);
+const RESP=[
+  {k:['enemy','assess','composition'],r:`**Enemy Assessment — 3d MRB(-)**\n\nComposition: ~600 pers, 12× BMP-2, 6× T-72B, 2× ZSU-23-4 ADA, est 4× MANPADS.\n\nDisposition: Defend in depth. BPs on RIDGE ALPHA fwd slope (confirmed). Armor reserve AXIS BEAR (estimated). ADA coverage denies aviation until suppressed.\n\nMLCOA (65%): Defend from prepared BPs, deny KARST VALLEY. MDCOA (20%): Armored counterattack along AXIS BEAR once friendly seizes RIDGE ALPHA. Address with ISR on AXIS BEAR and CAS on-call.\n\nKey vulnerability: enemy defense is oriented to AA1 — AA2 approach is unexpected.`},
+  {k:['ipb','intelligence prep','battlefield'],r:`**IPB — AO FALCON**\n\nKey terrain: RIDGE ALPHA dominates — controls observation and fires on OBJ EAGLE and both approach axes. Seizing it collapses the defense.\n\nAvenues: AA1 (mechanized, canalized, enemy-favored), AA2 (dismounted, concealed, friendly-favored).\n\nWeather: D+0–2 overcast 800ft ceiling — aviation marginal. Clears D+3.\n\nCollection gaps requiring ISR:\n1. ZSU exact position (RQ-7B task)\n2. Bridge MLC confirmation (EN recon)\n3. AA2 obstacles (ground recon NLT H-6)\n4. Armor reserve location (continuous ISR AXIS BEAR)`},
+  {k:['key terrain'],r:`**Key Terrain — Priority**\n\n1. RIDGE ALPHA — decisive. Controls the entire operation.\n2. OBJ EAGLE — primary objective. Seizing RIDGE ALPHA first collapses its defense.\n3. PL AMBER crossing sites — logistics and maneuver chokepoint.\n4. LZ FALCON — enables air assault. ADA must be suppressed first.\n\nRecommend A CO prioritizes RIDGE ALPHA above all else — do not commit C CO air assault until RIDGE ALPHA is secured or suppressed.`},
+  {k:['coa','recommend','best'],r:`**COA Recommendation: COA 2 — TURNING MOVEMENT (AI score 81/100)**\n\nRationale: Seizing RIDGE ALPHA first collapses OBJ EAGLE defense geometrically. Avoids canalized AA1 kill zone. Achieves surprise. A CO from RIDGE ALPHA + C CO air assault creates decisive cross-fire effect.\n\nKey risk: ADA suppression window is narrow (15min). Weather dependency for aviation D+0–2.\n\nBranch: if ADA active at DP-1, transition to COA 1 (B CO direct attack AA1 as main effort, no air assault).`},
+  {k:['wargame','phase'],r:`**Wargame — COA 2 Phase Summary**\n\nH-4: B CO feint fixes enemy on BPs. A CO infiltrates AA2 under EMCON. A BTY SEAD on ZSU positions (HPT-02).\n\nH-1: A CO seizes RIDGE ALPHA. Enemy reorients — armor reserve risk increases (monitor DP-2). Artillery shifts to OBJ EAGLE prep fires.\n\nH-Hour: C CO air assaults LZ FALCON. A CO attacks from RIDGE ALPHA. Defense collapses under cross-fire. B CO begins exploitation on AXIS BLUE.\n\nH+2: Consolidate OBJ EAGLE. Establish 360° defense. Expect counterattack (DP-4). B CO exploits to PL COPPER on CDR order.`},
+  {k:['opord','operation order','generate order'],r:`**OPORD 001-26 — OP IRON SENTINEL**\n\n1. SITUATION: Enemy 3d MRB(-) defends KARST VALLEY. See Annex B.\n2. MISSION: 2-14 IN BN attacks to seize OBJ EAGLE NLT D+3 to deny enemy KARST VALLEY corridor.\n3. EXECUTION: COA 2. B CO feint AA1. A CO infiltrate AA2, seize RIDGE ALPHA H-1. C CO air assault LZ FALCON H-Hour. H-Hour: 0400L D+0.\n4. SUSTAINMENT: BSB sustains 96hr. FARP MG 337-883. CASEVAC priority CAT A/B.\n5. C&S: BN CDR with B CO (TAC). PACE: SINCGARS/EPLRS/SATCOM/visual.\n\nFull OPORD with annexes available on request.`},
+  {k:['risk','danger','threat'],r:`**Risk Assessment**\n\nExtreme (pre-control):\n🔴 ADA threat to air assault → SEAD required, 15min window → residual HIGH\n🔴 Enemy armor counterattack → ISR + CAS + BDE reserve → residual MODERATE\n\nHigh:\n🟡 Logistics split (FARP) → FARP plan + 96hr pre-positioned → residual LOW\n🟡 Weather/aviation → Branch to COA 1 → residual MODERATE\n🟡 Bridge MLC → EN recon NLT D-2 → residual LOW\n\nOverall residual: MODERATE. CDR acceptance required.`},
+  {k:['fire','fires','artillery','sead'],r:`**Preliminary Fires Plan**\n\nSEAD: A BTY → ZSU-23-4 (HPT-02) H-35min. Critical for aviation — 15min suppression window.\nPrep: A BTY → OBJ EAGLE BPs H-15min to H-Hour. Suppress RIDGE ALPHA fwd slope H-30min.\nCAS: ANGLICO coordinates — on-call for DP-2 (armor on AXIS BEAR) and DP-4 (counterattack).\nNOFIRES: 600m HADITHA village, medical facility MG 341-889, water treatment plant MG 343-891.\nFSCL: PL COPPER — no fires beyond without BCT approval.`},
+  {k:['force','allocat','assign'],r:`**Force Allocation — COA 2**\n\nA CO (main effort P1) → infiltrate AA2 → seize RIDGE ALPHA NLT H-1\nB CO (shaping) → feint/limited attack AXIS BLUE → fix enemy BPs\nC CO (main effort P2) → air assault LZ FALCON → seize OBJ EAGLE H-Hour\nA BTY → SEAD + PREP + on-call CAS deconfliction\n172 EN → task-org to A CO for AA2 obstacle clearance\nISR Plt → RQ-7B-1 on AXIS BEAR (MDCOA), RQ-7B-2 clears AA2 NLT H-6\n\nBDE reserve: 1-12 IN BN, uncommitted — activate on DP-4.`},
+];
+
+function matchAI(t){
+  const tl=t.toLowerCase();
+  for(const r of RESP)if(r.k.some(k=>tl.includes(k)))return r.r;
+  return `Analyzing in context of OP IRON SENTINEL...\n\nCurrent situation: COA 2 (Turning Movement) is the recommended COA — RIDGE ALPHA is decisive terrain. ADA suppression and SEAD timing are the critical planning factors.\n\nSwitch modes at the top to access planning tools, or click any element on the map for detailed analysis. What specifically do you need?`;
 }
 
-function addAIMessage(sender, text, type = 'assistant') {
-  const msgs = document.getElementById('ai-messages');
-  const now = new Date();
-  const ts = `${String(now.getUTCHours()).padStart(2,'0')}${String(now.getUTCMinutes()).padStart(2,'0')}Z`;
-  const div = document.createElement('div');
-  div.className = 'ai-msg';
-  div.innerHTML = `<div class="ai-msg-header">${sender} — ${ts}</div><div class="ai-bubble ${type}">${text.replace(/\n/g,'<br>').replace(/✅/g,'<span style="color:var(--accent2)">✅</span>').replace(/⚠️/g,'<span style="color:var(--amber)">⚠️</span>').replace(/🔴/g,'<span style="color:#f87171">🔴</span>').replace(/🟡/g,'<span style="color:var(--amber)">🟡</span>').replace(/🟢/g,'<span style="color:var(--accent2)">🟢</span>')}</div>`;
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+let thinking_timer;
+function thinking(cb){
+  document.getElementById('ai-send-btn').disabled=true;
+  const msgs=document.getElementById('ai-msgs');
+  const el=document.createElement('div');
+  el.className='athinking';
+  el.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';
+  msgs.appendChild(el);msgs.scrollTop=msgs.scrollHeight;
+  thinking_timer=setTimeout(()=>{
+    el.remove();
+    document.getElementById('ai-send-btn').disabled=false;
+    cb();
+  },800+Math.random()*600);
 }
 
-function addCCIR() {
-  const row = document.createElement('tr');
-  row.innerHTML = `<td>6</td><td><input type="text" placeholder="Enter CCIR..." style="background:var(--bg);border:none;color:var(--text);font-family:var(--font);font-size:11px;width:100%;outline:none"></td><td><select style="background:var(--bg);border:none;color:var(--text);font-family:var(--font);font-size:10px"><option>PIR</option><option>FFIR</option></select></td><td><span class="badge badge-amber">OPEN</span></td>`;
-  const tbody = document.querySelector('#page-1 tbody');
-  if (tbody) tbody.appendChild(row);
+function aiMsg(txt,role){
+  const msgs=document.getElementById('ai-msgs');
+  const n=new Date(),p=v=>String(v).padStart(2,'0');
+  const ts=`${p(n.getUTCHours())}${p(n.getUTCMinutes())}Z`;
+  const el=document.createElement('div');
+  el.innerHTML=`<div class="amsg-role">${role==='user'?'Planner':role==='ctx'?'System':'AI'} · ${ts}</div>
+    <div class="abubble ${role==='user'?'user':role==='ctx'?'ctx':'ai'}">${
+      txt.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    }</div>`;
+  msgs.appendChild(el);msgs.scrollTop=msgs.scrollHeight;
 }
 
-// Initialize
-updateQuickPrompts(1);
+function sendQ(p){aiMsg(p,'user');thinking(()=>aiMsg(matchAI(p),'ai'));}
+function sendMsg(){
+  const i=document.getElementById('ai-inp');
+  const t=i.value.trim();if(!t)return;
+  aiMsg(t,'user');i.value='';
+  thinking(()=>aiMsg(matchAI(t),'ai'));
+}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
+
+/* ═══════════════════════════════════════════════
+   TIMELINE
+═══════════════════════════════════════════════ */
+const DAYS=['D-3','D-2','D-1','D+0','D+1','D+2','D+3','D+4','D+5'];
+const PHASES=[
+  {label:'PLANNING',  color:'#6366f1',dayStart:0,daySpan:2},
+  {label:'MOVEMENT',  color:'#10b981',dayStart:2,daySpan:2},
+  {label:'ACTION',    color:'#ef4444',dayStart:4,daySpan:3},
+  {label:'CONSOL.',   color:'#f59e0b',dayStart:7,daySpan:2},
+];
+const DAY_W=120;
+
+function buildTimeline(){
+  const inner=document.getElementById('tl-inner');
+  // Day columns
+  inner.style.width=(DAYS.length*DAY_W)+'px';
+  inner.innerHTML=DAYS.map(d=>`
+    <div class="tl-day" style="width:${DAY_W}px">
+      <div class="tl-day-lbl">${d}</div>
+    </div>`).join('');
+  // Phase blocks
+  PHASES.forEach(p=>{
+    const el=document.createElement('div');
+    el.className='phase-blk';
+    el.style.cssText=`left:${p.dayStart*DAY_W+4}px;width:${p.daySpan*DAY_W-8}px;background:${p.color};
+      color:${['#10b981','#6366f1'].includes(p.color)?'#fff':'#000'}`;
+    el.draggable=true;
+    el.innerHTML=`${p.label}<div class="ph-resize"></div>`;
+    el.addEventListener('dragstart',e=>{
+      e.dataTransfer.setData('phase',p.label);
+      e.dataTransfer.effectAllowed='move';
+    });
+    inner.appendChild(el);
+    // resize handle
+    const rh=el.querySelector('.ph-resize');
+    let resizing=false,startX=0,startW=0;
+    rh.addEventListener('mousedown',e=>{
+      resizing=true;startX=e.clientX;startW=el.offsetWidth;
+      e.stopPropagation();e.preventDefault();
+    });
+    document.addEventListener('mousemove',e=>{
+      if(!resizing)return;
+      const delta=e.clientX-startX;
+      const newW=Math.max(60,startW+delta);
+      el.style.width=newW+'px';
+    });
+    document.addEventListener('mouseup',()=>{resizing=false;});
+  });
+  // Phase drop reorder
+  inner.addEventListener('dragover',e=>{e.preventDefault();});
+  inner.addEventListener('drop',e=>{
+    e.preventDefault();
+    const phase=e.dataTransfer.getData('phase');
+    if(!phase)return;
+    const rect=inner.getBoundingClientRect();
+    const x=e.clientX-rect.left;
+    const day=Math.round(x/DAY_W);
+    const el=Array.from(inner.querySelectorAll('.phase-blk')).find(b=>b.textContent.trim().startsWith(phase));
+    if(el)el.style.left=`${day*DAY_W+4}px`;
+  });
+  // NOW indicator
+  const nowEl=document.createElement('div');
+  nowEl.id='tl-now';nowEl.style.left=(2*DAY_W)+'px';
+  inner.appendChild(nowEl);
+}
+buildTimeline();
+
+/* timeline playback */
+let playing=false,nowPx=2*DAY_W,playIv;
+function tlToggle(){
+  playing=!playing;
+  const b=document.getElementById('play-btn');
+  b.textContent=playing?'⏸':'▶';b.classList.toggle('on',playing);
+  if(playing){
+    playIv=setInterval(()=>{
+      nowPx+=1.5;
+      if(nowPx>DAYS.length*DAY_W)nowPx=0;
+      const el=document.getElementById('tl-now');
+      if(el)el.style.left=nowPx+'px';
+      // scroll to keep now visible
+      const track=document.getElementById('tl-track');
+      if(nowPx>track.scrollLeft+track.clientWidth-60)track.scrollLeft+=20;
+    },40);
+  }else clearInterval(playIv);
+}
+function tlReset(){
+  playing=false;clearInterval(playIv);nowPx=2*DAY_W;
+  const b=document.getElementById('play-btn');b.textContent='▶';b.classList.remove('on');
+  const el=document.getElementById('tl-now');if(el)el.style.left=nowPx+'px';
+  document.getElementById('tl-track').scrollLeft=0;
+}
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+renderLP('analyze');
+renderQuick('analyze');
+aiMsg('OP IRON SENTINEL loaded. Terrain analysis, enemy disposition, ADA coverage, and approach routes are overlaid on the map.\n\nClick any element on the map for instant AI analysis, or switch modes at the top to begin planning.','ai');
 </script>
 </body>
 </html>
