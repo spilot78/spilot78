@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SENTINEL PLATFORM — Mission Command</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--surface:#0d1117;--panel:rgba(10,13,20,.94);--border:rgba(255,255,255,.07);
+  --green:#10b981;--blue:#3b82f6;--red:#ef4444;--amber:#f59e0b;--purple:#8b5cf6;
+  --text:#eef2f7;--sub:#94a3b8;--muted:#475569;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;overflow:hidden}
+
+/* ── LAYOUT ── */
+#app{display:grid;grid-template-rows:50px 1fr 96px;height:100vh}
+#workspace{display:grid;grid-template-columns:200px 1fr 310px;overflow:hidden}
+
+/* ── TOPBAR ── */
+#topbar{
+  display:flex;align-items:center;gap:0;
+  background:rgba(7,9,14,.97);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);z-index:1000;padding:0 16px;
+}
+.tb-brand{display:flex;align-items:center;gap:10px;padding-right:20px;border-right:1px solid var(--border)}
+.tb-pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tb-name{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--text)}
+.tb-sub{font-size:9px;color:var(--muted);letter-spacing:.1em;margin-top:1px}
+.tb-nav{display:flex;padding:0 16px;gap:1px}
+.tb-link{
+  padding:6px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--sub);background:none;border:none;cursor:pointer;font-family:var(--font);
+  border-radius:5px;transition:all .15s;position:relative
+}
+.tb-link:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.tb-link.active{color:var(--text)}
+.tb-link.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--green);border-radius:2px 2px 0 0}
+.tb-r{margin-left:auto;display:flex;align-items:center;gap:12px}
+.tb-sysbar{display:flex;gap:6px}
+.sys-pip{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--muted);padding:3px 8px;border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:all .15s}
+.sys-pip:hover{border-color:rgba(255,255,255,.15);color:var(--sub)}
+.sys-pip .dot{width:5px;height:5px;border-radius:50%}
+.sys-pip .dot.on{background:var(--green)}
+.sys-pip .dot.warn{background:var(--amber)}
+.sys-pip .dot.off{background:var(--red)}
+.tb-clock{font-size:11px;font-family:'Courier New',monospace;color:var(--sub);letter-spacing:.05em;padding-left:12px;border-left:1px solid var(--border)}
+.tb-cl-badge{font-size:9px;color:var(--red);border:1px solid rgba(239,68,68,.35);padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.1em}
+
+/* ── LEFT: SYSTEMS PANEL ── */
+#sys-panel{
+  background:var(--panel);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;backdrop-filter:blur(12px)
+}
+.sp-head{
+  padding:10px 12px 8px;font-size:9px;text-transform:uppercase;
+  letter-spacing:.14em;color:var(--muted);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between
+}
+.sp-add{background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;padding:2px 7px;border-radius:4px;font-size:10px;transition:all .15s;font-family:var(--font)}
+.sp-add:hover{border-color:var(--green);color:var(--green)}
+#sys-list{flex:1;overflow-y:auto;padding:8px}
+.sys-cat{font-size:8px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);padding:8px 4px 4px;margin-top:4px}
+.sys-item{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+  border:1px solid var(--border);margin-bottom:4px;cursor:pointer;transition:all .18s;
+  background:rgba(255,255,255,.02)
+}
+.sys-item:hover{border-color:rgba(255,255,255,.15);background:rgba(255,255,255,.04)}
+.sys-item.active{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.05)}
+.sys-ico{font-size:14px;line-height:1;flex-shrink:0}
+.sys-info{flex:1;min-width:0}
+.sys-iname{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sys-isub{font-size:9px;color:var(--muted);margin-top:1px}
+.sys-sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sys-sdot.on{background:var(--green);box-shadow:0 0 5px var(--green)}
+.sys-sdot.warn{background:var(--amber)}
+.sys-sdot.off{background:var(--red)}
+
+/* ── CENTER: CANVAS ── */
+#canvas-wrap{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+#canvas-toolbar{
+  padding:8px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+  background:rgba(10,13,20,.6);backdrop-filter:blur(8px)
+}
+.ct-label{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
+.ct-scenario{font-size:12px;font-weight:700;color:var(--text)}
+.ct-btns{margin-left:auto;display:flex;gap:6px}
+.ct-btn{
+  padding:4px 12px;font-size:10px;font-weight:600;letter-spacing:.06em;
+  border:1px solid var(--border);background:none;color:var(--sub);
+  cursor:pointer;border-radius:5px;font-family:var(--font);transition:all .15s
+}
+.ct-btn:hover{border-color:rgba(255,255,255,.2);color:var(--text)}
+.ct-btn.primary{background:var(--green);border-color:var(--green);color:#000}
+.ct-btn.primary:hover{background:#059669}
+
+#canvas{
+  flex:1;overflow-y:auto;padding:14px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+  align-content:start
+}
+
+/* ── WIDGETS ── */
+.widget{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;display:flex;flex-direction:column;
+  animation:fadeIn .4s ease-out;transition:border-color .2s
+}
+.widget:hover{border-color:rgba(255,255,255,.12)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.widget[data-span="2"]{grid-column:span 2}
+.widget[data-span="3"]{grid-column:span 3}
+
+.widget-hdr{
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(255,255,255,.02);flex-shrink:0
+}
+.wh-left{display:flex;align-items:center;gap:8px}
+.w-type-dot{width:6px;height:6px;border-radius:50%}
+.w-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--sub)}
+.w-actions{display:flex;gap:5px}
+.w-btn{background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;padding:2px 7px;border-radius:3px;font-size:9px;font-family:var(--font);transition:all .12s}
+.w-btn:hover{border-color:rgba(255,255,255,.2);color:var(--sub)}
+.widget-body{flex:1;padding:12px;overflow:auto}
+
+/* status board */
+.sb-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.sb-row:last-child{border-bottom:none}
+.sb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sb-dot.green{background:var(--green);box-shadow:0 0 5px var(--green)}
+.sb-dot.amber{background:var(--amber)}
+.sb-dot.red{background:var(--red)}
+.sb-name{font-size:11px;font-weight:600;flex:1;color:var(--text)}
+.sb-status{font-size:10px;color:var(--sub)}
+.sb-tag{font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700;letter-spacing:.04em}
+.sb-tag.g{background:rgba(16,185,129,.2);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.sb-tag.a{background:rgba(245,158,11,.2);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.sb-tag.r{background:rgba(239,68,68,.2);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+
+/* metrics */
+.metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px}
+.metric-card{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center}
+.metric-val{font-size:26px;font-weight:800;color:var(--text);line-height:1}
+.metric-unit{font-size:11px;color:var(--sub);margin-top:2px}
+.metric-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:6px}
+.metric-trend{font-size:10px;margin-top:4px}
+.metric-trend.up{color:var(--green)}
+.metric-trend.dn{color:var(--red)}
+
+/* workflow / decision flow */
+.flow-step{
+  display:flex;align-items:flex-start;gap:10px;padding:9px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);position:relative
+}
+.flow-step:last-child{border-bottom:none}
+.flow-step::before{
+  content:'';position:absolute;left:13px;top:28px;bottom:-9px;
+  width:1px;background:rgba(255,255,255,.08);
+}
+.flow-step:last-child::before{display:none}
+.fs-num{
+  width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.06);
+  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:800;color:var(--sub);flex-shrink:0;z-index:1
+}
+.flow-step.done .fs-num{background:rgba(16,185,129,.2);border-color:var(--green);color:var(--green)}
+.flow-step.active .fs-num{background:rgba(59,130,246,.2);border-color:var(--blue);color:var(--blue);box-shadow:0 0 10px rgba(59,130,246,.3)}
+.flow-step.blocked .fs-num{background:rgba(239,68,68,.15);border-color:var(--red);color:var(--red)}
+.fs-body{flex:1}
+.fs-title{font-size:11px;font-weight:600;color:var(--text);line-height:1.4}
+.fs-desc{font-size:10px;color:var(--sub);margin-top:3px;line-height:1.5}
+.fs-badge{display:inline-block;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;margin-left:6px;text-transform:uppercase;letter-spacing:.05em;vertical-align:middle}
+.fs-badge.act{background:rgba(59,130,246,.2);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.fs-badge.blk{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.fs-badge.done{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.fs-actions{display:flex;gap:6px;margin-top:8px}
+.fs-act-btn{padding:4px 10px;font-size:10px;border:1px solid var(--border);background:none;color:var(--sub);cursor:pointer;border-radius:5px;font-family:var(--font);transition:all .12s}
+.fs-act-btn:hover{border-color:rgba(255,255,255,.2);color:var(--text)}
+.fs-act-btn.go{background:rgba(16,185,129,.15);border-color:var(--green);color:var(--green)}
+
+/* intel report */
+.intel-class{font-size:9px;font-weight:800;letter-spacing:.12em;margin-bottom:8px;padding:3px 0;border-bottom:1px solid var(--border)}
+.intel-class.s{color:var(--red)}
+.intel-entry{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.intel-entry:last-child{border-bottom:none}
+.intel-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.intel-src{font-size:9px;font-weight:700;color:var(--amber);letter-spacing:.05em}
+.intel-time{font-size:9px;color:var(--muted);font-family:'Courier New',monospace}
+.intel-conf{font-size:8px;padding:1px 5px;border-radius:2px;font-weight:700}
+.intel-conf.hi{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.intel-conf.md{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.intel-body{font-size:11px;color:var(--text);line-height:1.6}
+
+/* target list */
+.tgt-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px}
+.tgt-row:last-child{border-bottom:none}
+.tgt-id{font-family:'Courier New',monospace;font-size:10px;color:var(--amber);width:60px;flex-shrink:0}
+.tgt-name{flex:1;color:var(--text);font-weight:500}
+.tgt-prio{font-size:9px;width:28px;text-align:center;font-weight:800}
+.tgt-stat{font-size:9px;padding:1px 6px;border-radius:2px}
+
+/* mini map in widget */
+.map-widget-svg{width:100%;border-radius:4px;background:#111d14}
+
+/* data table */
+.dt{width:100%;border-collapse:collapse;font-size:11px}
+.dt th{padding:6px 10px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:700}
+.dt td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)}
+.dt tr:last-child td{border-bottom:none}
+.dt tr:hover td{background:rgba(255,255,255,.02)}
+
+/* chart bars */
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-lbl{font-size:10px;color:var(--sub);width:80px;text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:14px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .6s ease-out}
+.bar-val{font-size:10px;color:var(--text);width:36px;text-align:right;flex-shrink:0;font-weight:600}
+
+/* system connector widget */
+.conn-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.conn-row:last-child{border-bottom:none}
+.conn-ico{font-size:16px;width:28px;text-align:center}
+.conn-info{flex:1}
+.conn-name{font-size:11px;font-weight:600;color:var(--text)}
+.conn-cap{font-size:9px;color:var(--muted);margin-top:2px}
+.conn-status{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700}
+
+/* widget drag */
+.widget[draggable="true"]{cursor:grab}
+.widget[draggable="true"]:active{cursor:grabbing}
+.widget.dragging{opacity:.5;border:1px dashed var(--green)!important}
+
+/* empty canvas state */
+.canvas-empty{
+  grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 20px;text-align:center;opacity:.6
+}
+.canvas-empty-icon{font-size:40px;margin-bottom:14px}
+.canvas-empty-title{font-size:16px;font-weight:700;color:var(--sub);margin-bottom:6px}
+.canvas-empty-sub{font-size:12px;color:var(--muted);max-width:300px;line-height:1.7}
+
+/* ── AI PANEL ── */
+#ai-panel{
+  background:var(--panel);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;backdrop-filter:blur(12px)
+}
+.ai-hdr{
+  padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between
+}
+.ai-hdr-l{display:flex;align-items:center;gap:9px}
+.ai-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.ai-title{font-size:12px;font-weight:700}
+.ai-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.ai-mode-select{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--sub);font-family:var(--font);font-size:10px;padding:3px 8px;border-radius:5px;cursor:pointer;outline:none}
+
+#ai-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.amsg-role{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px}
+.abubble{padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.65}
+.abubble.ai{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.18)}
+.abubble.user{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2)}
+.abubble.sys{background:rgba(139,92,246,.07);border:1px solid rgba(139,92,246,.2);color:#c4b5fd;font-size:11px}
+.abubble.gen{background:rgba(16,185,129,.04);border:1px solid rgba(16,185,129,.12);color:var(--green);font-size:11px}
+.athinking{display:flex;gap:5px;padding:10px 12px}
+.td{width:7px;height:7px;border-radius:50%;background:var(--green);opacity:.4;animation:tb .9s infinite}
+.td:nth-child(2){animation-delay:.15s}.td:nth-child(3){animation-delay:.3s}
+@keyframes tb{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
+
+/* widget-gen preview inside AI bubble */
+.gen-preview{margin-top:8px;padding:8px;background:rgba(0,0,0,.3);border-radius:6px;border:1px solid rgba(16,185,129,.15)}
+.gen-preview-row{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:10px;color:var(--sub)}
+.gen-preview-row::before{content:'→';color:var(--green);font-size:10px}
+
+.ai-scenarios{padding:8px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.ai-sc-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:2px}
+.sc-btn{
+  padding:6px 11px;background:rgba(255,255,255,.03);border:1px solid var(--border);
+  border-radius:6px;color:var(--sub);cursor:pointer;font-size:11px;
+  text-align:left;font-family:var(--font);transition:all .14s
+}
+.sc-btn:hover{border-color:var(--green);color:var(--text);background:rgba(16,185,129,.06)}
+
+.ai-inp-row{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
+.ai-inp{
+  flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:12px;font-family:var(--font);
+  padding:8px 12px;outline:none;resize:none;min-height:36px;max-height:100px;transition:border-color .15s
+}
+.ai-inp:focus{border-color:rgba(16,185,129,.5)}
+.ai-inp::placeholder{color:var(--muted)}
+.ai-send{width:36px;height:36px;border-radius:8px;background:var(--green);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+.ai-send:hover{background:#059669}
+.ai-send:disabled{opacity:.4;cursor:not-allowed}
+.ai-send svg{width:15px;height:15px;fill:white}
+
+/* ── TIMELINE / WORKFLOW STRIP ── */
+#tl-strip{
+  background:rgba(10,13,20,.96);border-top:1px solid var(--border);
+  backdrop-filter:blur(12px);display:flex;flex-direction:column
+}
+.tl-hdr{display:flex;align-items:center;gap:14px;padding:5px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.tl-ttl{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
+.tl-phase-key{display:flex;gap:10px}
+.tl-key-item{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--sub)}
+.tl-key-sq{width:8px;height:8px;border-radius:2px}
+.tl-r{margin-left:auto;display:flex;gap:6px}
+.tl-ib{width:26px;height:26px;border-radius:5px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--sub);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s;flex-shrink:0}
+.tl-ib:hover{border-color:var(--green);color:var(--green)}
+.tl-ib.on{background:var(--green);border-color:var(--green);color:#000}
+
+#tl-scroll{flex:1;overflow-x:auto;overflow-y:hidden;position:relative;scrollbar-width:thin;scrollbar-color:var(--muted) transparent}
+#tl-inner{position:relative;display:flex;height:100%}
+.tl-day{flex-shrink:0;width:120px;height:100%;border-right:1px solid rgba(255,255,255,.05);position:relative}
+.tl-day-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:5px 8px;position:relative;z-index:2}
+.phase-blk{
+  position:absolute;top:22px;height:calc(100% - 30px);
+  border-radius:6px;display:flex;align-items:center;padding:0 10px;
+  font-size:10px;font-weight:700;cursor:grab;white-space:nowrap;user-select:none;
+  box-shadow:0 2px 10px rgba(0,0,0,.5);z-index:3;transition:filter .15s
+}
+.phase-blk:hover{filter:brightness(1.15)}
+.phase-blk:active{cursor:grabbing}
+.ph-rsz{position:absolute;right:0;top:0;bottom:0;width:8px;cursor:col-resize;background:rgba(0,0,0,.2);border-radius:0 6px 6px 0}
+#tl-now{position:absolute;top:0;bottom:0;width:2px;background:var(--green);box-shadow:0 0 10px var(--green);z-index:10;pointer-events:none}
+#tl-now-lbl{position:absolute;top:5px;left:5px;background:var(--green);color:#000;font-size:8px;font-weight:900;padding:1px 4px;border-radius:2px;letter-spacing:.06em;white-space:nowrap}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- TOPBAR -->
+<header id="topbar">
+  <div class="tb-brand">
+    <div class="tb-pulse"></div>
+    <div><div class="tb-name">SENTINEL</div><div class="tb-sub">Mission Command Platform</div></div>
+  </div>
+  <nav class="tb-nav">
+    <button class="tb-link active" onclick="tbNav(this,'dashboard')">Dashboard</button>
+    <button class="tb-link" onclick="tbNav(this,'planning')">Planning</button>
+    <button class="tb-link" onclick="tbNav(this,'workflows')">Workflows</button>
+    <button class="tb-link" onclick="tbNav(this,'systems')">Systems</button>
+  </nav>
+  <div class="tb-r">
+    <div class="tb-sysbar" id="sys-bar">
+      <div class="sys-pip"><div class="dot on"></div>BFT</div>
+      <div class="sys-pip"><div class="dot on"></div>AFATDS</div>
+      <div class="sys-pip"><div class="dot warn"></div>DCGS</div>
+      <div class="sys-pip"><div class="dot off"></div>AMPS</div>
+    </div>
+    <span class="tb-cl-badge">SECRET</span>
+    <span class="tb-clock" id="clock">000000Z</span>
+  </div>
+</header>
+
+<!-- WORKSPACE -->
+<div id="workspace">
+
+  <!-- SYSTEMS -->
+  <div id="sys-panel">
+    <div class="sp-head">Systems &amp; Capabilities<button class="sp-add" onclick="addSystem()">+ Add</button></div>
+    <div id="sys-list">
+      <div class="sys-cat">Situational Awareness</div>
+      <div class="sys-item active" onclick="sysClick('bft')"><span class="sys-ico">🔵</span><div class="sys-info"><div class="sys-iname">BFT / FBCB2</div><div class="sys-isub">Blue Force Tracker</div></div><div class="sys-sdot on"></div></div>
+      <div class="sys-item" onclick="sysClick('cpof')"><span class="sys-ico">🎯</span><div class="sys-info"><div class="sys-iname">CPOF / ATAK</div><div class="sys-isub">Command Post</div></div><div class="sys-sdot on"></div></div>
+      <div class="sys-cat">Intelligence</div>
+      <div class="sys-item" onclick="sysClick('dcgs')"><span class="sys-ico">🔴</span><div class="sys-info"><div class="sys-iname">DCGS-A</div><div class="sys-isub">Intel Fusion</div></div><div class="sys-sdot warn"></div></div>
+      <div class="sys-item" onclick="sysClick('metoc')"><span class="sys-ico">🌤</span><div class="sys-info"><div class="sys-iname">METOC</div><div class="sys-isub">Weather Service</div></div><div class="sys-sdot on"></div></div>
+      <div class="sys-cat">Fires</div>
+      <div class="sys-item" onclick="sysClick('afatds')"><span class="sys-ico">🔥</span><div class="sys-info"><div class="sys-iname">AFATDS</div><div class="sys-isub">Fire Support</div></div><div class="sys-sdot on"></div></div>
+      <div class="sys-cat">Sustainment</div>
+      <div class="sys-item" onclick="sysClick('gcss')"><span class="sys-ico">📦</span><div class="sys-info"><div class="sys-iname">GCSS-A</div><div class="sys-isub">Logistics</div></div><div class="sys-sdot on"></div></div>
+      <div class="sys-cat">Aviation</div>
+      <div class="sys-item" onclick="sysClick('amps')"><span class="sys-ico">✈️</span><div class="sys-info"><div class="sys-iname">AMPS</div><div class="sys-isub">Aviation Planning</div></div><div class="sys-sdot off"></div></div>
+      <div class="sys-cat">Communications</div>
+      <div class="sys-item" onclick="sysClick('wint')"><span class="sys-ico">📡</span><div class="sys-info"><div class="sys-iname">WIN-T / PACE</div><div class="sys-isub">Network &amp; Comms</div></div><div class="sys-sdot on"></div></div>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="canvas-wrap">
+    <div id="canvas-toolbar">
+      <div><div class="ct-label">Active Scenario</div><div class="ct-scenario" id="ct-scenario">OP IRON SENTINEL — Mission Command</div></div>
+      <div class="ct-btns">
+        <button class="ct-btn" onclick="clearCanvas()">Clear Canvas</button>
+        <button class="ct-btn" onclick="exportLayout()">Export</button>
+        <button class="ct-btn primary" onclick="promptFocus()">+ Ask AI to Build</button>
+      </div>
+    </div>
+    <div id="canvas"></div>
+  </div>
+
+  <!-- AI PANEL -->
+  <div id="ai-panel">
+    <div class="ai-hdr">
+      <div class="ai-hdr-l"><div class="ai-dot"></div><div><div class="ai-title">AI Command Interface</div><div class="ai-sub">Describe your need — I'll build the UI</div></div></div>
+    </div>
+    <div id="ai-msgs"></div>
+    <div class="ai-scenarios" id="ai-scenarios">
+      <div class="ai-sc-lbl">Quick Scenarios</div>
+    </div>
+    <div class="ai-inp-row">
+      <textarea class="ai-inp" id="ai-inp" placeholder="Describe your mission need, request a dashboard, or ask for analysis…" rows="2" onkeydown="handleKey(event)"></textarea>
+      <button class="ai-send" id="ai-send-btn" onclick="sendMsg()"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
+    </div>
+  </div>
+
+</div><!-- /#workspace -->
+
+<!-- TIMELINE STRIP -->
+<div id="tl-strip">
+  <div class="tl-hdr">
+    <span class="tl-ttl">Operation Timeline</span>
+    <div class="tl-phase-key">
+      <span class="tl-key-item"><span class="tl-key-sq" style="background:#6366f1"></span>Planning</span>
+      <span class="tl-key-item"><span class="tl-key-sq" style="background:#10b981"></span>Movement</span>
+      <span class="tl-key-item"><span class="tl-key-sq" style="background:#ef4444"></span>Action</span>
+      <span class="tl-key-item"><span class="tl-key-sq" style="background:#f59e0b"></span>Consolidation</span>
+    </div>
+    <div class="tl-r">
+      <button class="tl-ib" id="play-btn" onclick="tlToggle()" title="Play">▶</button>
+      <button class="tl-ib" onclick="tlReset()" title="Reset">↺</button>
+    </div>
+  </div>
+  <div id="tl-scroll"><div id="tl-inner"></div></div>
+</div>
+
+</div><!-- /#app -->
+<script>
+/* ═══ CLOCK ═══════════════════════════════════════════ */
+function tick(){const n=new Date(),p=v=>String(v).padStart(2,'0');document.getElementById('clock').textContent=`${p(n.getUTCDate())}${p(n.getUTCHours())}${p(n.getUTCMinutes())}Z`;}
+tick();setInterval(tick,1000);
+
+/* ═══ NAV ══════════════════════════════════════════════ */
+function tbNav(el,view){
+  document.querySelectorAll('.tb-link').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('ct-scenario').textContent={
+    dashboard:'OP IRON SENTINEL — Mission Command',
+    planning:'OP IRON SENTINEL — MDMP Planning',
+    workflows:'Workflow Builder',
+    systems:'System Integration Hub'
+  }[view]||'';
+}
+
+/* ═══ WIDGET SYSTEM ═════════════════════════════════════ */
+const canvas = document.getElementById('canvas');
+let widgetCount = 0;
+
+const WIDGET_COLORS = {
+  status:'#3b82f6',intel:'#f59e0b',fires:'#ef4444',
+  logistics:'#8b5cf6',aviation:'#06b6d4',workflow:'#10b981',
+  metrics:'#94a3b8',map:'#10b981',systems:'#6366f1',chart:'#f59e0b'
+};
+
+function makeWidget(cfg){
+  widgetCount++;
+  const id = 'w'+widgetCount;
+  const el = document.createElement('div');
+  el.className = 'widget';
+  el.id = id;
+  el.draggable = true;
+  if(cfg.span) el.dataset.span = cfg.span;
+  const color = WIDGET_COLORS[cfg.type]||'#94a3b8';
+  const actions = (cfg.actions||[]).map(a=>`<button class="w-btn" onclick="${a.fn}">${a.label}</button>`).join('');
+  el.innerHTML = `
+    <div class="widget-hdr">
+      <div class="wh-left">
+        <div class="w-type-dot" style="background:${color}"></div>
+        <div class="w-title">${cfg.title||'Widget'}</div>
+      </div>
+      <div class="w-actions">
+        ${actions}
+        <button class="w-btn" onclick="removeWidget('${id}')" title="Remove">✕</button>
+      </div>
+    </div>
+    <div class="widget-body">${renderBody(cfg)}</div>`;
+  // drag to reorder
+  el.addEventListener('dragstart',e=>{e.dataTransfer.setData('wid',id);el.classList.add('dragging');});
+  el.addEventListener('dragend',()=>el.classList.remove('dragging'));
+  canvas.addEventListener('dragover',e=>{e.preventDefault();});
+  canvas.addEventListener('drop',e=>{
+    const wid=e.dataTransfer.getData('wid');
+    if(!wid)return;
+    const dragged=document.getElementById(wid);
+    if(dragged&&dragged!==el)canvas.insertBefore(dragged,el);
+  });
+  return el;
+}
+
+function addWidget(cfg, delay=0){
+  const empty = canvas.querySelector('.canvas-empty');
+  if(empty) empty.remove();
+  setTimeout(()=>{
+    const el = makeWidget(cfg);
+    canvas.appendChild(el);
+  }, delay);
+}
+
+function removeWidget(id){document.getElementById(id)?.remove();if(!canvas.children.length)showEmpty();}
+function clearCanvas(){canvas.innerHTML='';showEmpty();}
+function showEmpty(){
+  canvas.innerHTML=`<div class="canvas-empty">
+    <div class="canvas-empty-icon">⬡</div>
+    <div class="canvas-empty-title">Canvas is empty</div>
+    <div class="canvas-empty-sub">Describe your mission need to the AI and it will build the right tools for this scenario.</div>
+  </div>`;
+}
+
+/* ═══ WIDGET RENDERERS ══════════════════════════════════ */
+function renderBody(cfg){
+  switch(cfg.type){
+    case 'status': return renderStatus(cfg);
+    case 'metrics': return renderMetrics(cfg);
+    case 'workflow': return renderWorkflow(cfg);
+    case 'intel': return renderIntel(cfg);
+    case 'targets': return renderTargets(cfg);
+    case 'chart': return renderChart(cfg);
+    case 'table': return renderTable(cfg);
+    case 'map': return renderMapWidget(cfg);
+    case 'systems': return renderSystems(cfg);
+    default: return `<div style="color:var(--muted);font-size:11px">${cfg.content||'No content'}</div>`;
+  }
+}
+
+function renderStatus(cfg){
+  return (cfg.items||[]).map(i=>`
+    <div class="sb-row">
+      <div class="sb-dot ${i.s||'green'}"></div>
+      <div class="sb-name">${i.name}</div>
+      <div class="sb-status">${i.detail||''}</div>
+      <div class="sb-tag ${i.s==='green'?'g':i.s==='amber'?'a':'r'}">${i.tag||''}</div>
+    </div>`).join('');
+}
+
+function renderMetrics(cfg){
+  return `<div class="metrics-row">${(cfg.items||[]).map(m=>`
+    <div class="metric-card">
+      <div class="metric-val" style="color:${m.color||'var(--text)'}">${m.val}</div>
+      <div class="metric-unit">${m.unit||''}</div>
+      <div class="metric-lbl">${m.lbl}</div>
+      ${m.trend?`<div class="metric-trend ${m.trend>0?'up':'dn'}">${m.trend>0?'▲':'▼'} ${Math.abs(m.trend)}%</div>`:''}
+    </div>`).join('')}</div>`;
+}
+
+function renderWorkflow(cfg){
+  return (cfg.steps||[]).map(s=>`
+    <div class="flow-step ${s.state||''}">
+      <div class="fs-num">${s.state==='done'?'✓':s.n}</div>
+      <div class="fs-body">
+        <div class="fs-title">${s.title}${s.badge?`<span class="fs-badge ${s.badge.type}">${s.badge.label}</span>`:''}</div>
+        ${s.desc?`<div class="fs-desc">${s.desc}</div>`:''}
+        ${s.actions?`<div class="fs-actions">${s.actions.map(a=>`<button class="fs-act-btn ${a.primary?'go':''}" onclick="wfAction('${a.label}')">${a.label}</button>`).join('')}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function renderIntel(cfg){
+  return `<div class="intel-class s">SECRET // ${cfg.caveat||'NOFORN'}</div>` +
+    (cfg.reports||[]).map(r=>`
+    <div class="intel-entry">
+      <div class="intel-head">
+        <span class="intel-src">${r.src}</span>
+        <span class="intel-time">${r.time}</span>
+        <span class="intel-conf ${r.conf==='HIGH'?'hi':'md'}">${r.conf}</span>
+      </div>
+      <div class="intel-body">${r.body}</div>
+    </div>`).join('');
+}
+
+function renderTargets(cfg){
+  return `<table class="dt"><thead><tr><th>TGT ID</th><th>Description</th><th>Prio</th><th>Status</th></tr></thead><tbody>` +
+    (cfg.targets||[]).map(t=>`<tr>
+      <td class="tgt-id">${t.id}</td>
+      <td style="font-size:11px">${t.name}</td>
+      <td><div class="tgt-prio" style="color:${['#ef4444','#f59e0b','#10b981'][t.prio-1]||'#94a3b8'}">${t.prio}</div></td>
+      <td><span class="sb-tag ${t.status==='ACTIVE'?'r':t.status==='ENGAGED'?'a':'g'}">${t.status}</span></td>
+    </tr>`).join('') + '</tbody></table>';
+}
+
+function renderChart(cfg){
+  const max = Math.max(...(cfg.bars||[]).map(b=>b.val));
+  return `<div class="bar-chart">${(cfg.bars||[]).map(b=>`
+    <div class="bar-row">
+      <div class="bar-lbl">${b.lbl}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(b.val/max*100).toFixed(0)}%;background:${b.color||'var(--green)'}"></div></div>
+      <div class="bar-val">${b.val}${b.unit||''}</div>
+    </div>`).join('')}</div>`;
+}
+
+function renderTable(cfg){
+  return `<table class="dt"><thead><tr>${(cfg.cols||[]).map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>` +
+    (cfg.rows||[]).map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('') + '</tbody></table>';
+}
+
+function renderMapWidget(cfg){
+  return `<svg class="map-widget-svg" viewBox="0 0 400 280" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="vg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1710"/><stop offset="1" stop-color="#111d14"/></linearGradient>
+      <pattern id="mg" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M40 0L0 0 0 40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/>
+      </pattern>
+    </defs>
+    <rect width="400" height="280" fill="url(#vg)"/>
+    <rect width="400" height="280" fill="url(#mg)"/>
+    <!-- West ridge -->
+    <path d="M0,0 L0,280 L130,280 C110,200 100,130 115,70 L100,0Z" fill="#0a1408" opacity="0.9"/>
+    <!-- East ridge -->
+    <path d="M400,0 L250,0 C265,60 275,130 270,200 L280,280 L400,280Z" fill="#0a1408" opacity="0.9"/>
+    <!-- Valley floor -->
+    <path d="M150,280 C160,220 165,160 170,110 C175,60 185,30 210,10 C220,5 230,2 245,0" stroke="#1a3520" stroke-width="60" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <!-- River -->
+    <path d="M165,280 C168,230 170,180 172,130 C174,90 178,55 185,20" stroke="#1e3a5a" stroke-width="3" fill="none" opacity="0.8"/>
+    <!-- Routes -->
+    <polyline points="140,280 158,230 168,180 178,130 200,90 230,60 250,30" stroke="#3b82f6" stroke-width="2" fill="none" opacity="0.7"/>
+    <polyline points="140,280 145,240 148,200 152,155 160,120" stroke="#10b981" stroke-width="1.5" fill="none" stroke-dasharray="6 4" opacity="0.65"/>
+    <!-- Phase lines -->
+    <line x1="0" y1="220" x2="400" y2="220" stroke="#f59e0b" stroke-width="1" stroke-dasharray="8 5" opacity="0.6"/>
+    <text x="5" y="216" fill="#f59e0b" font-size="8" font-weight="700" opacity="0.8">PL AMBER</text>
+    <line x1="0" y1="55" x2="400" y2="55" stroke="#10b981" stroke-width="1" stroke-dasharray="8 5" opacity="0.6"/>
+    <text x="5" y="51" fill="#10b981" font-size="8" font-weight="700" opacity="0.8">PL COPPER</text>
+    <!-- OBJ -->
+    <rect x="237" y="40" width="16" height="16" fill="rgba(239,68,68,.2)" stroke="#ef4444" stroke-width="2" transform="rotate(45 245 48)"/>
+    <text x="258" y="48" fill="#ef4444" font-size="8" font-weight="800">OBJ EAGLE</text>
+    <!-- Ridge Alpha -->
+    <polygon points="160,110 152,126 168,126" fill="#10b981" opacity="0.9"/>
+    <text x="172" y="124" fill="#10b981" font-size="7">RIDGE α</text>
+    <!-- Enemy BPs -->
+    <rect x="208" y="92" width="14" height="14" fill="#ef4444" rx="1"/>
+    <text x="211" y="103" fill="#fff" font-size="7" font-weight="800">BP</text>
+    <rect x="232" y="68" width="14" height="14" fill="#ef4444" rx="1"/>
+    <text x="235" y="79" fill="#fff" font-size="7" font-weight="800">BP</text>
+    <!-- ADA ring -->
+    <circle cx="222" cy="98" r="35" fill="rgba(239,68,68,.05)" stroke="#ef4444" stroke-width="1" stroke-dasharray="5 4" opacity="0.5"/>
+    <!-- Staging -->
+    <circle cx="142" cy="268" r="7" fill="#1d4ed8" opacity="0.9"/>
+    <text x="152" y="271" fill="#93c5fd" font-size="8">SP</text>
+    <!-- Expand hint -->
+    <text x="350" y="275" fill="rgba(255,255,255,0.2)" font-size="8">tap to expand</text>
+  </svg>`;
+}
+
+function renderSystems(cfg){
+  return (cfg.connections||[]).map(c=>`
+    <div class="conn-row">
+      <div class="conn-ico">${c.ico}</div>
+      <div class="conn-info">
+        <div class="conn-name">${c.name}</div>
+        <div class="conn-cap">${c.caps}</div>
+      </div>
+      <span class="conn-status" style="background:${c.online?'rgba(16,185,129,.15)':'rgba(239,68,68,.1)'};color:${c.online?'var(--green)':'var(--red)'};border:1px solid ${c.online?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)'}">${c.online?'ONLINE':'OFFLINE'}</span>
+    </div>`).join('');
+}
+
+function wfAction(label){aiMsg(`Executing: ${label}…`,'sys');}
+function exportLayout(){aiMsg('Layout exported to mission folder. OPORD annex generated.','sys');}
+function promptFocus(){document.getElementById('ai-inp').focus();}
+function addSystem(){aiMsg('Opening System Integration Wizard. Describe the system you want to connect or select from the registry.','ai');}
+function sysClick(id){
+  const names={bft:'Blue Force Tracker',cpof:'CPOF/ATAK',dcgs:'DCGS-A Intelligence',metoc:'METOC Weather',afatds:'AFATDS Fire Support',gcss:'GCSS-A Logistics',amps:'AMPS Aviation',wint:'WIN-T Communications'};
+  thinking(()=>aiMsg(`**${names[id]||id}** capabilities available:\n\nClick "Add to Canvas" to create a widget, or describe what you need from this system and I'll build the right view.`,'ai'));
+}
+
+/* ═══ SCENARIOS ════════════════════════════════════════ */
+const SCENARIOS = [
+  {label:'Air Defense & SEAD', key:'ada'},
+  {label:'Logistics & Sustainment', key:'log'},
+  {label:'Intelligence Fusion', key:'intel'},
+  {label:'Mission Command Overview', key:'cmd'},
+  {label:'Fires Coordination', key:'fires'},
+  {label:'Aviation Planning', key:'avn'},
+];
+
+const SCENARIO_WIDGETS = {
+  ada: {
+    name:'Air Defense Suppression Coordination',
+    widgets:[
+      {type:'metrics',title:'ADA Threat Status',items:[
+        {val:'2',lbl:'ZSU-23-4 Confirmed',color:'#ef4444'},
+        {val:'4',lbl:'MANPADS Estimated',color:'#f59e0b'},
+        {val:'35',unit:'min',lbl:'SEAD Window',color:'#10b981'},
+        {val:'92',unit:'%',lbl:'Suppression Conf.',color:'#10b981'},
+      ],span:'3',actions:[{label:'Refresh',fn:'sysClick("dcgs")'}]},
+      {type:'status',title:'ADA Systems Tracked',items:[
+        {name:'ZSU-23-4 #1',detail:'MG 344-893',s:'red',tag:'ACTIVE'},
+        {name:'ZSU-23-4 #2',detail:'MG 347-891',s:'amber',tag:'PROBABLE'},
+        {name:'MANPADS Plt',detail:'AXIS BEAR',s:'amber',tag:'UNCONF'},
+        {name:'SA-7 (est)',detail:'East ridge',s:'amber',tag:'ESTIMATED'},
+        {name:'Radar node',detail:'MG 345-889',s:'red',tag:'ACTIVE'},
+      ]},
+      {type:'workflow',title:'SEAD Execution Workflow',span:'2',steps:[
+        {n:1,state:'done',title:'ISR confirms ZSU position',desc:'RQ-7B confirms both ZSU-23-4 locations. MG 344-893 and 347-891.',badge:{type:'done',label:'CONFIRMED'}},
+        {n:2,state:'active',title:'A BTY SEAD fires H-35min',desc:'6× M109A7 fire 4 volleys on HPT-02. Effectiveness assessment in progress.',badge:{type:'act',label:'IN PROGRESS'},
+          actions:[{label:'View Fire Mission',primary:false},{label:'Confirm BDA',primary:true}]},
+        {n:3,state:'',title:'DP-1: ADA Status Check',desc:'If ADA still active 30min after SEAD — branch to COA 1 (no air assault).'},
+        {n:4,state:'',title:'C CO Air Assault launch',desc:'C CO launches from SP on CDR confirmation of SEAD effectiveness.'},
+      ]},
+      {type:'intel',title:'ADA Intelligence Summary',reports:[
+        {src:'SIGINT',time:'091630Z',conf:'HIGH',body:'ZSU-23-4 radar emissions confirmed on freq 3.4GHz vic MG 344-893. Active search mode — threat posture ELEVATED.'},
+        {src:'IMINT',time:'091515Z',conf:'MEDIUM',body:'Imagery shows 2 vehicles consistent with ZSU-23-4 in defilade position RIDGE ALPHA fwd slope. Crew activity visible.'},
+      ]},
+      {type:'chart',title:'Airspace Risk by Route',bars:[
+        {lbl:'AXIS BLUE',val:85,color:'#ef4444',unit:'%'},
+        {lbl:'LZ FALCON',val:72,color:'#ef4444',unit:'%'},
+        {lbl:'LZ HAWK',val:48,color:'#f59e0b',unit:'%'},
+        {lbl:'AA2 (dismtd)',val:12,color:'#10b981',unit:'%'},
+      ]},
+    ]
+  },
+  log: {
+    name:'Logistics & Sustainment Dashboard',
+    widgets:[
+      {type:'metrics',title:'Supply Status — Class Summary',span:'3',items:[
+        {val:'78',unit:'%',lbl:'Class I (Rations)',color:'#f59e0b',trend:-4},
+        {val:'62',unit:'%',lbl:'Class III (Fuel)',color:'#ef4444',trend:-12},
+        {val:'91',unit:'%',lbl:'Class V (Ammo)',color:'#10b981',trend:0},
+        {val:'85',unit:'%',lbl:'Class IX (Parts)',color:'#10b981',trend:2},
+      ]},
+      {type:'status',title:'CASEVAC Status',items:[
+        {name:'MEDEVAC 1-1',detail:'Available, Grid MG 337-883',s:'green',tag:'READY'},
+        {name:'MEDEVAC 1-2',detail:'On mission — ETE 22min',s:'amber',tag:'ENGAGED'},
+        {name:'Ground CASEVAC',detail:'2× M997, AA2 route',s:'green',tag:'STAGED'},
+        {name:'BAS Location',detail:'MG 332-884, operational',s:'green',tag:'ONLINE'},
+        {name:'Role 2 (FARP)',detail:'MG 337-883, medical aug',s:'amber',tag:'PARTIAL'},
+      ]},
+      {type:'workflow',title:'LOGPAC Execution',span:'2',steps:[
+        {n:1,state:'done',title:'Pre-combat checks complete',desc:'All vehicles loadplanned. Class I, III, V loaded IAW LOGPAC order.',badge:{type:'done',label:'DONE'}},
+        {n:2,state:'done',title:'Movement to FARP',desc:'BSB convoy departed SP MG 337-883 at 091500Z. En route.',badge:{type:'done',label:'MOVING'}},
+        {n:3,state:'active',title:'FARP established',desc:'Aviation FARP ops active. Class III(A) available for C CO. Await SP confirmation.',badge:{type:'act',label:'ACTIVE'},
+          actions:[{label:'FARP Status',primary:false},{label:'Confirm Ops',primary:true}]},
+        {n:4,state:'',title:'LOGPAC push to forward units',desc:'A CO receives LOGPAC via LZ FALCON post-seizure. B/C CO via AXIS BLUE.'},
+      ]},
+      {type:'table',title:'Supply Request Queue',cols:['Unit','Class','Qty','Priority','Status'],rows:[
+        ['A CO','V (7.62mm)','30K rds','URGENT','Submitted'],
+        ['C CO','III(A) Fuel','800 gal','ROUTINE','Approved'],
+        ['A BTY','V (155mm)','240 rds','URGENT','In transit'],
+        ['172 EN','IX (track)','2 sets','ROUTINE','Pending'],
+      ]},
+    ]
+  },
+  intel: {
+    name:'Intelligence Fusion Dashboard',
+    widgets:[
+      {type:'metrics',title:'Collection Status',span:'3',items:[
+        {val:'6',lbl:'Active ISR Assets',color:'#10b981'},
+        {val:'3',lbl:'Open PIRs',color:'#f59e0b'},
+        {val:'87',unit:'%',lbl:'Target Confidence',color:'#10b981'},
+        {val:'2',lbl:'Intel Gaps',color:'#ef4444'},
+      ]},
+      {type:'intel',title:'Current Intelligence Reporting',span:'2',reports:[
+        {src:'SIGINT',time:'091730Z',conf:'HIGH',body:'COMINT intercepts confirm enemy BN CDR communications at MG 346-893. C2 node active, 3-5 personnel. Recommend targeting priority HPT-01.'},
+        {src:'HUMINT',time:'091600Z',conf:'MEDIUM',body:'Local source IRONWOOD reports armor movement via AXIS BEAR approx 091430Z. 2-4 vehicles, T-72 type, direction NW. Corroborates MDCOA.'},
+        {src:'IMINT',time:'091515Z',conf:'HIGH',body:'RQ-7B imagery confirms 2× ZSU-23-4 positions RIDGE ALPHA fwd slope. Position data sent to AFATDS for targeting.'},
+      ]},
+      {type:'targets',title:'High Payoff Target List',targets:[
+        {id:'HPT-01',name:'Enemy BN CP — MG 346-893',prio:1,status:'ACTIVE'},
+        {id:'HPT-02',name:'ZSU-23-4 ×2 — RIDGE ALPHA',prio:1,status:'ENGAGED'},
+        {id:'HPT-03',name:'BMP-2 Plt — RIDGE ALPHA reverse',prio:2,status:'ACTIVE'},
+        {id:'HPT-04',name:'EW/Jamming Node — MG 347-890',prio:2,status:'ACTIVE'},
+        {id:'HPT-05',name:'Armor Reserve — AXIS BEAR',prio:1,status:'ACTIVE'},
+      ]},
+      {type:'chart',title:'Enemy Strength Estimate by Location',bars:[
+        {lbl:'RIDGE ALPHA',val:180,color:'#ef4444',unit:' pers'},
+        {lbl:'OBJ EAGLE',val:80,color:'#ef4444',unit:' pers'},
+        {lbl:'AXIS BEAR',val:120,color:'#f59e0b',unit:' pers'},
+        {lbl:'EN CP',val:40,color:'#f59e0b',unit:' pers'},
+        {lbl:'Reserve (est)',val:200,color:'#f59e0b',unit:' pers'},
+      ]},
+    ]
+  },
+  cmd: {
+    name:'Mission Command — Operational Overview',
+    widgets:[
+      {type:'metrics',title:'Operational Status',span:'3',items:[
+        {val:'D+2',lbl:'Current Phase',color:'#ef4444'},
+        {val:'87',unit:'%',lbl:'Force Readiness',color:'#10b981',trend:-3},
+        {val:'3',lbl:'Open CCIRs',color:'#f59e0b'},
+        {val:'72',unit:'hr',lbl:'Supply Endurance',color:'#10b981'},
+        {val:'4',lbl:'Decision Points',color:'#94a3b8'},
+      ]},
+      {type:'map',title:'Operational Overlay — AO FALCON',span:'2'},
+      {type:'status',title:'Unit Status Board',items:[
+        {name:'A CO — 2-14 IN',detail:'RIDGE ALPHA — SECURE',s:'green',tag:'READY'},
+        {name:'B CO — 2-14 IN',detail:'AXIS BLUE — ADVANCING',s:'green',tag:'MOVING'},
+        {name:'C CO — 2-14 IN',detail:'OBJ EAGLE — SEIZING',s:'amber',tag:'TIC'},
+        {name:'A BTY 2-17 FA',detail:'PP IRON — FIRING',s:'green',tag:'FIRING'},
+        {name:'172 EN CO(-)',detail:'AA2 — Route cleared',s:'green',tag:'COMPLETE'},
+        {name:'ISR Plt',detail:'AXIS BEAR coverage',s:'green',tag:'ONLINE'},
+      ]},
+      {type:'workflow',title:'Current Decision: DP-2 (Armor)',span:'2',steps:[
+        {n:1,state:'done',title:'ISR detects armor movement AXIS BEAR',badge:{type:'done',label:'TRIGGERED'}},
+        {n:2,state:'active',title:'CAS request transmitted to ANGLICO',desc:'A-10 flight RAZORBACK 21 inbound — ETE 8min.',badge:{type:'act',label:'IN PROGRESS'},
+          actions:[{label:'CAS Status',primary:false},{label:'Confirm Tgt',primary:true}]},
+        {n:3,state:'',title:'B CO shifts to screen position',desc:'B CO moves to blocking position vic MG 340-880.'},
+        {n:4,state:'',title:'BDE reserve activation (if required)',desc:'DP-4 trigger — 1-12 IN BN commitment requires BCT CDR approval.'},
+      ]},
+    ]
+  },
+  fires: {
+    name:'Fires Coordination Dashboard',
+    widgets:[
+      {type:'metrics',title:'Fires Status',span:'3',items:[
+        {val:'6',lbl:'Howitzers Available',color:'#10b981'},
+        {val:'240',unit:'rds',lbl:'155mm Ready',color:'#10b981'},
+        {val:'2',lbl:'Missions Active',color:'#ef4444'},
+        {val:'94',unit:'%',lbl:'Mission Success Rate',color:'#10b981'},
+      ]},
+      {type:'targets',title:'Active Target List — AFATDS',targets:[
+        {id:'AD0341',name:'ZSU-23-4 #1 — MG 344-893',prio:1,status:'ENGAGED'},
+        {id:'AD0342',name:'ZSU-23-4 #2 — MG 347-891',prio:1,status:'ACTIVE'},
+        {id:'BI0421',name:'Enemy BN CP — MG 346-893',prio:1,status:'ACTIVE'},
+        {id:'AR0182',name:'BMP-2 Plt — RIDGE ALPHA',prio:2,status:'ACTIVE'},
+        {id:'AR0183',name:'Armor Reserve — AXIS BEAR',prio:1,status:'ACTIVE'},
+      ]},
+      {type:'workflow',title:'Fire Mission — HPT-02 SEAD',span:'2',steps:[
+        {n:1,state:'done',title:'Fire mission request submitted',desc:'Grid: MG 344-893. Method: Area suppression. Effect: Suppress ZSU.',badge:{type:'done',label:'APPROVED'}},
+        {n:2,state:'done',title:'Howitzers laid and loaded',desc:'A BTY 6× M109A7 ready. 4 volleys planned. H-35min.',badge:{type:'done',label:'READY'}},
+        {n:3,state:'active',title:'Fire for effect — SEAD',desc:'Firing in progress. Volley 2 of 4 complete. BDA pending.',badge:{type:'act',label:'FIRING'},
+          actions:[{label:'BDA Report',primary:false},{label:'Cease Fire',primary:false}]},
+        {n:4,state:'',title:'BDA Assessment',desc:'ISR conducts post-strike assessment. Go/No-Go for C CO air assault.'},
+      ]},
+      {type:'table',title:'NOFIRES Areas',cols:['Name','Grid','Radius','Auth'],rows:[
+        ['HADITHA Village','MG 340-890','600m','BCT CDR'],
+        ['Medical Facility','MG 341-889','200m','BCT CDR'],
+        ['Water Treatment','MG 343-891','300m','BCT CDR'],
+        ['LZ HAWK','MG 338-881','150m','BN CDR'],
+      ]},
+    ]
+  },
+  avn: {
+    name:'Aviation Planning & Airspace',
+    widgets:[
+      {type:'metrics',title:'Aviation Status',span:'3',items:[
+        {val:'4',lbl:'UH-60 Available',color:'#10b981'},
+        {val:'2',lbl:'AH-64 CAS Ready',color:'#10b981'},
+        {val:'2',lbl:'RQ-7B Airborne',color:'#3b82f6'},
+        {val:'AMBER',lbl:'Airspace Condition',color:'#f59e0b'},
+      ]},
+      {type:'status',title:'Aircraft Status',items:[
+        {name:'UH-60 BLADE 11',detail:'LZ FALCON — ON STATION',s:'green',tag:'READY'},
+        {name:'UH-60 BLADE 12',detail:'FARP — Refueling',s:'amber',tag:'REFUEL'},
+        {name:'UH-60 BLADE 21',detail:'C CO insert — RTB',s:'amber',tag:'RTFARP'},
+        {name:'AH-64 APACHE 31',detail:'CAS station — AXIS BEAR',s:'green',tag:'ON STA'},
+        {name:'RQ-7B SHADOW 1',detail:'AXIS BEAR coverage',s:'green',tag:'AIRBORNE'},
+        {name:'RQ-7B SHADOW 2',detail:'AA2 route — tasked',s:'green',tag:'AIRBORNE'},
+      ]},
+      {type:'workflow',title:'Air Assault Execution',span:'2',steps:[
+        {n:1,state:'done',title:'SEAD confirmation — ADA suppressed',badge:{type:'done',label:'CLEARED'}},
+        {n:2,state:'done',title:'C CO loads aircraft at FARP',desc:'105 personnel, full combat load. 3× UH-60.',badge:{type:'done',label:'LOADED'}},
+        {n:3,state:'active',title:'Deception flight to LZ HAWK',desc:'BLADE flight 11/12 en route LZ HAWK for deception landing. ETE 4min.',badge:{type:'act',label:'AIRBORNE'},
+          actions:[{label:'Track Flight',primary:false},{label:'Redirect FALCON',primary:true}]},
+        {n:4,state:'',title:'Assault into LZ FALCON',desc:'Redirect to LZ FALCON on CDR approval. LZ FALCON clear confirmation required.'},
+      ]},
+    ]
+  },
+};
+
+function loadScenario(key){
+  const sc = SCENARIO_WIDGETS[key];
+  if(!sc) return;
+  clearCanvas();
+  document.getElementById('ct-scenario').textContent = sc.name;
+  const genMsg = `Building **${sc.name}** dashboard…\n\nGenerating ${sc.widgets.length} widgets:`;
+  const preview = sc.widgets.map(w=>`<div class="gen-preview-row">${w.title} (${w.type})</div>`).join('');
+  aiMsg(genMsg+'<div class="gen-preview">'+preview+'</div>','gen');
+  sc.widgets.forEach((w,i)=>addWidget(w, i*120+300));
+  setTimeout(()=>aiMsg(`Dashboard ready. All ${sc.widgets.length} panels are live-connected to their respective systems. Click any element for AI analysis, or ask me to modify, add, or link widgets.`,'ai'),sc.widgets.length*120+600);
+}
+
+/* ═══ AI CHAT ══════════════════════════════════════════ */
+const RESPONSES = [
+  {k:['ada','air defense','sead','zsu'],sc:'ada'},
+  {k:['log','supply','sustainment','casevac','class'],sc:'log'},
+  {k:['intel','intelligence','target','ipb','hpt'],sc:'intel'},
+  {k:['command','overview','status','dashboard','overview'],sc:'cmd'},
+  {k:['fire','fires','artillery','afatds'],sc:'fires'},
+  {k:['avi','air assault','helicopter','rotary'],sc:'avn'},
+];
+
+const TEXT_RESPONSES = [
+  {k:['connect','add system','integrate'],r:`To connect a new system, describe it or select from the registry on the left. I can create a custom API connector for any system that provides:\n• REST or SOAP endpoints\n• Message queue feeds (MQ, MQTT)\n• File-based data exchange\n• Direct database access\n\nWhat system do you want to add?`},
+  {k:['workflow','process','checklist','decision'],r:`I can generate a decision workflow for any process. Describe the scenario — I'll create the steps, decision points, and trigger conditions. Example: "Create a CASEVAC decision workflow" or "Build a CCIR reporting process".`},
+  {k:['clear','remove','delete','start over'],fn:()=>{clearCanvas();return'Canvas cleared. Describe your new mission scenario and I\'ll build the right set of tools.';}},
+  {k:['export','save','download'],r:`Layout exported. Generated products:\n• Mission dashboard (PDF)\n• Data snapshot (JSON)\n• Widget configuration (shareable link)\n• OPORD Annex (formatted)`},
+  {k:['help','what can','capabilities'],r:`I can help you:\n\n• **Build custom dashboards** — describe your mission and I create the right panels\n• **Connect systems** — integrate any C2 system, sensor, or data source\n• **Generate workflows** — decision trees, checklists, and process flows\n• **Analyze data** — click any widget element for AI analysis\n• **Create UI dynamically** — any tool you need, for any mission type\n\nStart with a mission scenario or ask for a specific capability.`},
+];
+
+function matchResp(text){
+  const t = text.toLowerCase();
+  // Check if it's a scenario request
+  for(const r of RESPONSES){
+    if(r.k.some(k=>t.includes(k))){
+      setTimeout(()=>loadScenario(r.sc),800);
+      const sc=SCENARIO_WIDGETS[r.sc];
+      return `Building **${sc?.name||r.sc}** dashboard for you. I'm generating ${sc?.widgets?.length||4} specialized widgets connected to the relevant systems.\n\nI'll customize this further based on your specific needs — just ask.`;
+    }
+  }
+  // Text responses
+  for(const r of TEXT_RESPONSES){
+    if(r.k.some(k=>t.includes(k))){
+      if(r.fn) return r.fn();
+      return r.r;
+    }
+  }
+  // Generic - but try to generate something useful
+  if(t.length > 10){
+    // Attempt to parse a custom scenario
+    setTimeout(()=>{
+      addWidget({
+        type:'workflow',title:`AI Generated: ${text.slice(0,40)}…`,span:'2',
+        steps:[
+          {n:1,state:'active',title:'Requirement analysis',desc:'AI parsing mission requirement and identifying required capabilities.',badge:{type:'act',label:'PROCESSING'}},
+          {n:2,state:'',title:'System identification',desc:'Matching requirement to available connected systems.'},
+          {n:3,state:'',title:'UI generation',desc:'Building custom panels and data connectors.'},
+          {n:4,state:'',title:'Validation',desc:'Confirm with operator that generated layout meets needs.'},
+        ]
+      },400);
+    },1200);
+    return `Analyzing your request: "${text}"\n\nI've created an initial workflow scaffold. To refine this:\n• Tell me which systems to connect\n• Specify what data you need displayed\n• Describe the decision points you need supported\n\nThe more context you give me, the more precisely I can build the right tools.`;
+  }
+  return `I'm ready to build UI for any mission scenario. Try:\n\n• "Build a dashboard for air defense coordination"\n• "Create a logistics status view"\n• "Show me an intelligence fusion dashboard"\n• "I need to coordinate a medevac operation"\n\nOr describe any mission challenge and I'll create the right tools.`;
+}
+
+let thinkTimer;
+function thinking(cb){
+  document.getElementById('ai-send-btn').disabled=true;
+  const msgs=document.getElementById('ai-msgs');
+  const el=document.createElement('div');
+  el.className='athinking';
+  el.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';
+  msgs.appendChild(el);msgs.scrollTop=msgs.scrollHeight;
+  thinkTimer=setTimeout(()=>{el.remove();document.getElementById('ai-send-btn').disabled=false;cb();},900+Math.random()*500);
+}
+
+function aiMsg(txt,role='ai'){
+  const msgs=document.getElementById('ai-msgs');
+  const n=new Date(),p=v=>String(v).padStart(2,'0');
+  const ts=`${p(n.getUTCHours())}${p(n.getUTCMinutes())}Z`;
+  const el=document.createElement('div');
+  const roleLabel={ai:'AI',user:'Planner',sys:'System',gen:'AI — Generating'}[role]||role;
+  el.innerHTML=`<div class="amsg-role">${roleLabel} · ${ts}</div>
+    <div class="abubble ${role}">${txt.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;
+  msgs.appendChild(el);msgs.scrollTop=msgs.scrollHeight;
+}
+
+function sendMsg(){
+  const inp=document.getElementById('ai-inp');
+  const text=inp.value.trim();if(!text)return;
+  aiMsg(text,'user');inp.value='';
+  thinking(()=>aiMsg(matchResp(text),'ai'));
+}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
+
+/* ═══ SCENARIO BUTTONS ══════════════════════════════════ */
+function renderScenarioBtns(){
+  const c=document.getElementById('ai-scenarios');
+  c.innerHTML='<div class="ai-sc-lbl">Build for Scenario</div>'+
+    SCENARIOS.map(s=>`<button class="sc-btn" onclick="aiMsg('${s.label}','user');thinking(()=>{ loadScenario('${s.key}'); aiMsg('Building ${s.label} dashboard…','ai') })">→ ${s.label}</button>`).join('');
+}
+renderScenarioBtns();
+
+/* ═══ TIMELINE ══════════════════════════════════════════ */
+const DAYS=['D-3','D-2','D-1','D+0','D+1','D+2','D+3','D+4','D+5'];
+const PHASES=[
+  {label:'PLANNING',color:'#6366f1',start:0,span:2},
+  {label:'MOVEMENT',color:'#10b981',start:2,span:2},
+  {label:'ACTION',  color:'#ef4444',start:4,span:3},
+  {label:'CONSOL.', color:'#f59e0b',start:7,span:2},
+];
+const DW=120;
+
+function buildTimeline(){
+  const inner=document.getElementById('tl-inner');
+  inner.style.width=(DAYS.length*DW)+'px';
+  inner.innerHTML=DAYS.map(d=>`<div class="tl-day" style="width:${DW}px"><div class="tl-day-lbl">${d}</div></div>`).join('');
+  PHASES.forEach(p=>{
+    const el=document.createElement('div');
+    el.className='phase-blk';
+    el.style.cssText=`left:${p.start*DW+4}px;width:${p.span*DW-8}px;background:${p.color};color:${['#10b981','#6366f1'].includes(p.color)?'#fff':'#000'}`;
+    el.draggable=true;
+    el.innerHTML=p.label+'<div class="ph-rsz"></div>';
+    el.addEventListener('dragstart',e=>{e.dataTransfer.setData('phase',p.label);e.dataTransfer.effectAllowed='move';});
+    // resize
+    const rh=el.querySelector('.ph-rsz');
+    let rs=false,sx=0,sw=0;
+    rh.addEventListener('mousedown',e=>{rs=true;sx=e.clientX;sw=el.offsetWidth;e.stopPropagation();e.preventDefault();});
+    document.addEventListener('mousemove',e=>{if(!rs)return;el.style.width=Math.max(60,sw+(e.clientX-sx))+'px';});
+    document.addEventListener('mouseup',()=>{rs=false;});
+    inner.appendChild(el);
+  });
+  inner.addEventListener('dragover',e=>e.preventDefault());
+  inner.addEventListener('drop',e=>{
+    e.preventDefault();const ph=e.dataTransfer.getData('phase');
+    if(!ph)return;
+    const rect=inner.getBoundingClientRect();
+    const day=Math.round((e.clientX-rect.left)/DW);
+    const el=[...inner.querySelectorAll('.phase-blk')].find(b=>b.textContent.trim().startsWith(ph));
+    if(el)el.style.left=`${day*DW+4}px`;
+  });
+  const now=document.createElement('div');now.id='tl-now';
+  const lbl=document.createElement('div');lbl.id='tl-now-lbl';lbl.textContent='NOW';
+  now.appendChild(lbl);now.style.left=(2*DW)+'px';
+  inner.appendChild(now);
+}
+buildTimeline();
+
+let playing=false,nowPx=2*DW,playIv;
+function tlToggle(){
+  playing=!playing;
+  const b=document.getElementById('play-btn');
+  b.textContent=playing?'⏸':'▶';b.classList.toggle('on',playing);
+  if(playing){
+    playIv=setInterval(()=>{
+      nowPx+=1.5;if(nowPx>DAYS.length*DW)nowPx=0;
+      const n=document.getElementById('tl-now');if(n)n.style.left=nowPx+'px';
+      const tr=document.getElementById('tl-scroll');if(nowPx>tr.scrollLeft+tr.clientWidth-60)tr.scrollLeft+=20;
+    },40);
+  }else clearInterval(playIv);
+}
+function tlReset(){
+  playing=false;clearInterval(playIv);nowPx=2*DW;
+  const b=document.getElementById('play-btn');b.textContent='▶';b.classList.remove('on');
+  const n=document.getElementById('tl-now');if(n)n.style.left=nowPx+'px';
+  document.getElementById('tl-scroll').scrollLeft=0;
+}
+
+/* ═══ INIT ══════════════════════════════════════════════ */
+showEmpty();
+aiMsg('SENTINEL platform online. All connected systems active.\n\nThis is a **generic mission command interface**. I can build custom UI and workflows for any scenario — no two missions are the same.\n\nDescribe your mission need, or select a scenario to get started.','ai');
+</script>
+</body>
+</html>
