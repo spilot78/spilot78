@@ -1,293 +1,333 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1.0" />
-<title>ARMY AI PLANNER — OP IRON SENTINEL</title>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SENTINEL PLATFORM — Mission Command</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#07090e;--glass:rgba(7,9,14,.92);--border:rgba(255,255,255,.07);
-  --green:#10b981;--blue:#3b82f6;--red:#ef4444;--amber:#f59e0b;
-  --text:#f0f4f8;--sub:#94a3b8;--muted:#475569;
+  --bg:#07090e;--surface:#0d1117;--panel:rgba(10,13,20,.94);--border:rgba(255,255,255,.07);
+  --green:#10b981;--blue:#3b82f6;--red:#ef4444;--amber:#f59e0b;--purple:#8b5cf6;
+  --text:#eef2f7;--sub:#94a3b8;--muted:#475569;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
-html,body{height:100%;background:var(--bg);color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;overflow:hidden}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;overflow:hidden}
 
-/* ── LAYOUT ─────────────────────────────────────────── */
-#app{display:grid;grid-template-rows:52px 1fr 108px;height:100vh}
-#workspace{display:grid;grid-template-columns:164px 1fr 300px;overflow:hidden;position:relative}
+/* ── LAYOUT ── */
+#app{display:grid;grid-template-rows:50px 1fr 96px;height:100vh}
+#workspace{display:grid;grid-template-columns:200px 1fr 310px;overflow:hidden}
 
-/* ── TOPBAR ─────────────────────────────────────────── */
+/* ── TOPBAR ── */
 #topbar{
-  display:flex;align-items:center;gap:20px;padding:0 20px;
-  background:var(--glass);border-bottom:1px solid var(--border);
-  backdrop-filter:blur(16px);z-index:1000
+  display:flex;align-items:center;gap:0;
+  background:rgba(7,9,14,.97);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);z-index:1000;padding:0 16px;
 }
-.op-dot{width:8px;height:8px;border-radius:50%;background:var(--green);
-  box-shadow:0 0 8px var(--green);animation:glow 2s infinite}
-@keyframes glow{0%,100%{opacity:1}50%{opacity:.35}}
-.op-name{font-size:14px;font-weight:700;letter-spacing:.06em}
-.op-class{font-size:9px;color:var(--red);letter-spacing:.12em;font-weight:700;margin-top:1px}
-.modes{display:flex;gap:2px;background:rgba(255,255,255,.04);padding:4px;
-  border-radius:8px;border:1px solid var(--border);margin-left:12px}
-.mode-btn{
-  padding:5px 18px;border:none;background:none;color:var(--sub);
-  cursor:pointer;border-radius:6px;font-size:11px;font-weight:700;
-  letter-spacing:.08em;text-transform:uppercase;transition:all .2s;font-family:inherit
+.tb-brand{display:flex;align-items:center;gap:10px;padding-right:20px;border-right:1px solid var(--border)}
+.tb-pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tb-name{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--text)}
+.tb-sub{font-size:9px;color:var(--muted);letter-spacing:.1em;margin-top:1px}
+.tb-nav{display:flex;padding:0 16px;gap:1px}
+.tb-link{
+  padding:6px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--sub);background:none;border:none;cursor:pointer;font-family:var(--font);
+  border-radius:5px;transition:all .15s;position:relative
 }
-.mode-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
-.mode-btn.active{background:var(--green);color:#000;box-shadow:0 0 16px rgba(16,185,129,.35)}
-.topbar-r{margin-left:auto;display:flex;align-items:center;gap:16px}
-.clock{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums;
-  font-family:'Courier New',monospace;letter-spacing:.05em}
-.cl-badge{font-size:9px;color:var(--red);border:1px solid rgba(239,68,68,.4);
-  padding:2px 8px;border-radius:4px;letter-spacing:.1em;font-weight:700}
+.tb-link:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.tb-link.active{color:var(--text)}
+.tb-link.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--green);border-radius:2px 2px 0 0}
+.tb-r{margin-left:auto;display:flex;align-items:center;gap:12px}
+.tb-sysbar{display:flex;gap:6px}
+.sys-pip{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--muted);padding:3px 8px;border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:all .15s}
+.sys-pip:hover{border-color:rgba(255,255,255,.15);color:var(--sub)}
+.sys-pip .dot{width:5px;height:5px;border-radius:50%}
+.sys-pip .dot.on{background:var(--green)}
+.sys-pip .dot.warn{background:var(--amber)}
+.sys-pip .dot.off{background:var(--red)}
+.tb-clock{font-size:11px;font-family:'Courier New',monospace;color:var(--sub);letter-spacing:.05em;padding-left:12px;border-left:1px solid var(--border)}
+.tb-cl-badge{font-size:9px;color:var(--red);border:1px solid rgba(239,68,68,.35);padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.1em}
 
-/* ── LEFT PANEL ─────────────────────────────────────── */
-#left-panel{
-  background:var(--glass);border-right:1px solid var(--border);
-  backdrop-filter:blur(12px);display:flex;flex-direction:column;overflow:hidden
+/* ── LEFT: SYSTEMS PANEL ── */
+#sys-panel{
+  background:var(--panel);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;backdrop-filter:blur(12px)
 }
-.lp-head{padding:10px 12px 6px;font-size:9px;text-transform:uppercase;
-  letter-spacing:.14em;color:var(--muted);border-bottom:1px solid var(--border)}
-#lp-body{flex:1;overflow-y:auto;padding:10px 8px}
+.sp-head{
+  padding:10px 12px 8px;font-size:9px;text-transform:uppercase;
+  letter-spacing:.14em;color:var(--muted);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between
+}
+.sp-add{background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;padding:2px 7px;border-radius:4px;font-size:10px;transition:all .15s;font-family:var(--font)}
+.sp-add:hover{border-color:var(--green);color:var(--green)}
+#sys-list{flex:1;overflow-y:auto;padding:8px}
+.sys-cat{font-size:8px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);padding:8px 4px 4px;margin-top:4px}
+.sys-item{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+  border:1px solid var(--border);margin-bottom:4px;cursor:pointer;transition:all .18s;
+  background:rgba(255,255,255,.02)
+}
+.sys-item:hover{border-color:rgba(255,255,255,.15);background:rgba(255,255,255,.04)}
+.sys-item.active{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.05)}
+.sys-ico{font-size:14px;line-height:1;flex-shrink:0}
+.sys-info{flex:1;min-width:0}
+.sys-iname{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sys-isub{font-size:9px;color:var(--muted);margin-top:1px}
+.sys-sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sys-sdot.on{background:var(--green);box-shadow:0 0 5px var(--green)}
+.sys-sdot.warn{background:var(--amber)}
+.sys-sdot.off{background:var(--red)}
 
-/* unit card */
-.ucard{
-  border:1.5px solid rgba(59,130,246,.45);border-radius:7px;
-  padding:8px 8px 6px;margin-bottom:7px;cursor:grab;
-  background:rgba(59,130,246,.07);user-select:none;transition:all .2s
+/* ── CENTER: CANVAS ── */
+#canvas-wrap{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+#canvas-toolbar{
+  padding:8px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+  background:rgba(10,13,20,.6);backdrop-filter:blur(8px)
 }
-.ucard:hover{border-color:var(--blue);background:rgba(59,130,246,.14);transform:translateX(3px)}
-.ucard:active{cursor:grabbing}
-.ucard.placed{opacity:.3;cursor:default;pointer-events:none}
-.nato{width:100%;margin-bottom:5px}
-.nato svg{width:100%;height:auto;display:block}
-.ucard-name{font-size:11px;font-weight:700;text-align:center;color:var(--text)}
-.ucard-sub{font-size:9px;color:var(--sub);text-align:center;margin-top:2px}
+.ct-label{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
+.ct-scenario{font-size:12px;font-weight:700;color:var(--text)}
+.ct-btns{margin-left:auto;display:flex;gap:6px}
+.ct-btn{
+  padding:4px 12px;font-size:10px;font-weight:600;letter-spacing:.06em;
+  border:1px solid var(--border);background:none;color:var(--sub);
+  cursor:pointer;border-radius:5px;font-family:var(--font);transition:all .15s
+}
+.ct-btn:hover{border-color:rgba(255,255,255,.2);color:var(--text)}
+.ct-btn.primary{background:var(--green);border-color:var(--green);color:#000}
+.ct-btn.primary:hover{background:#059669}
 
-/* intel / dp list items */
-.list-item{
-  display:flex;gap:8px;align-items:flex-start;padding:8px;border-radius:7px;
-  border:1px solid var(--border);margin-bottom:6px;
-  background:rgba(255,255,255,.02);cursor:pointer;transition:all .15s
-}
-.list-item:hover{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.05)}
-.list-item-ico{font-size:14px;line-height:1;flex-shrink:0;margin-top:1px}
-.list-item-name{font-size:11px;font-weight:600;color:var(--text)}
-.list-item-sub{font-size:9px;color:var(--sub);margin-top:2px}
-
-/* ── MAP ────────────────────────────────────────────── */
-#map-wrap{
-  position:relative;overflow:hidden;background:#111d14;
-  display:flex;align-items:stretch
-}
-#map-wrap.drop-active::after{
-  content:'';position:absolute;inset:0;pointer-events:none;z-index:500;
-  box-shadow:inset 0 0 40px rgba(59,130,246,.25);
-  border:2px solid rgba(59,130,246,.4)
-}
-#map-svg{
-  width:100%;height:100%;display:block;
-  cursor:crosshair
+#canvas{
+  flex:1;overflow-y:auto;padding:14px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+  align-content:start
 }
 
-/* overlay markers layer */
-#map-markers{
-  position:absolute;inset:0;pointer-events:none;
-  overflow:hidden
+/* ── WIDGETS ── */
+.widget{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;display:flex;flex-direction:column;
+  animation:fadeIn .4s ease-out;transition:border-color .2s
 }
-.mmarker{
-  position:absolute;transform:translate(-50%,-50%);
-  pointer-events:all;cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;gap:3px
-}
-.mmarker-sym{
-  display:flex;align-items:center;justify-content:center;
-  font-size:9px;font-weight:800;letter-spacing:.04em
-}
-.mmarker-lbl{
-  font-size:9px;font-weight:700;white-space:nowrap;
-  text-shadow:0 1px 4px rgba(0,0,0,.9),0 0 8px rgba(0,0,0,.8);
-  pointer-events:none;letter-spacing:.04em
-}
-/* obj eagle diamond */
-.sym-diamond{
-  width:22px;height:22px;background:rgba(239,68,68,.15);
-  border:2.5px solid #ef4444;transform:rotate(45deg);border-radius:2px;
-  box-shadow:0 0 14px rgba(239,68,68,.6);
-  animation:obj-pulse 2.5s ease-in-out infinite
-}
-@keyframes obj-pulse{0%,100%{box-shadow:0 0 10px rgba(239,68,68,.5)}50%{box-shadow:0 0 22px rgba(239,68,68,.9)}}
-/* ridge triangle */
-.sym-triangle{
-  width:0;height:0;
-  border-left:12px solid transparent;border-right:12px solid transparent;
-  border-bottom:20px solid #10b981;
-  filter:drop-shadow(0 0 6px rgba(16,185,129,.6))
-}
-/* enemy BP square */
-.sym-bp{
-  width:22px;height:22px;background:#ef4444;
-  border:2px solid #fca5a5;border-radius:2px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:8px;font-weight:800;color:#fff;
-  box-shadow:0 0 12px rgba(239,68,68,.6)
-}
-/* enemy CP circle */
-.sym-cp{
-  width:22px;height:22px;background:#7f1d1d;
-  border:2px solid #ef4444;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:8px;font-weight:800;color:#fff;
-  box-shadow:0 0 10px rgba(239,68,68,.5)
-}
-/* ADA dashed circle */
-.sym-ada{
-  width:24px;height:24px;background:rgba(239,68,68,.15);
-  border:2px dashed #ef4444;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:7px;font-weight:800;color:#fca5a5
-}
-/* staging */
-.sym-sp{
-  width:18px;height:18px;background:#1d4ed8;
-  border:2px solid #93c5fd;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:8px;font-weight:700;color:#fff
-}
-/* LZ marker */
-.sym-lz{
-  width:22px;height:22px;background:rgba(255,255,255,.1);
-  border:2px solid rgba(255,255,255,.8);border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:9px;font-weight:800;color:#fff;
-  box-shadow:0 0 10px rgba(255,255,255,.3)
-}
-/* placed unit marker */
-.sym-unit{
-  min-width:36px;height:28px;background:#1d4ed8;
-  border:2px solid #93c5fd;border-radius:3px;
-  display:flex;align-items:center;justify-content:center;
-  padding:0 4px
-}
-.sym-unit svg{width:22px;height:16px}
+.widget:hover{border-color:rgba(255,255,255,.12)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.widget[data-span="2"]{grid-column:span 2}
+.widget[data-span="3"]{grid-column:span 3}
 
-/* map legend */
-#legend{
-  position:absolute;bottom:16px;left:12px;z-index:500;
-  background:var(--glass);border:1px solid var(--border);
-  border-radius:10px;backdrop-filter:blur(12px);padding:10px 14px
+.widget-hdr{
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(255,255,255,.02);flex-shrink:0
 }
-.leg-row{display:flex;align-items:center;gap:8px;padding:2px 0;font-size:10px;color:var(--sub)}
-.leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
-.leg-line{width:18px;height:2px;flex-shrink:0}
+.wh-left{display:flex;align-items:center;gap:8px}
+.w-type-dot{width:6px;height:6px;border-radius:50%}
+.w-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--sub)}
+.w-actions{display:flex;gap:5px}
+.w-btn{background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;padding:2px 7px;border-radius:3px;font-size:9px;font-family:var(--font);transition:all .12s}
+.w-btn:hover{border-color:rgba(255,255,255,.2);color:var(--sub)}
+.widget-body{flex:1;padding:12px;overflow:auto}
 
-/* ── AI PANEL ────────────────────────────────────────── */
+/* status board */
+.sb-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.sb-row:last-child{border-bottom:none}
+.sb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sb-dot.green{background:var(--green);box-shadow:0 0 5px var(--green)}
+.sb-dot.amber{background:var(--amber)}
+.sb-dot.red{background:var(--red)}
+.sb-name{font-size:11px;font-weight:600;flex:1;color:var(--text)}
+.sb-status{font-size:10px;color:var(--sub)}
+.sb-tag{font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700;letter-spacing:.04em}
+.sb-tag.g{background:rgba(16,185,129,.2);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.sb-tag.a{background:rgba(245,158,11,.2);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.sb-tag.r{background:rgba(239,68,68,.2);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+
+/* metrics */
+.metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px}
+.metric-card{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center}
+.metric-val{font-size:26px;font-weight:800;color:var(--text);line-height:1}
+.metric-unit{font-size:11px;color:var(--sub);margin-top:2px}
+.metric-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:6px}
+.metric-trend{font-size:10px;margin-top:4px}
+.metric-trend.up{color:var(--green)}
+.metric-trend.dn{color:var(--red)}
+
+/* workflow / decision flow */
+.flow-step{
+  display:flex;align-items:flex-start;gap:10px;padding:9px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);position:relative
+}
+.flow-step:last-child{border-bottom:none}
+.flow-step::before{
+  content:'';position:absolute;left:13px;top:28px;bottom:-9px;
+  width:1px;background:rgba(255,255,255,.08);
+}
+.flow-step:last-child::before{display:none}
+.fs-num{
+  width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.06);
+  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:800;color:var(--sub);flex-shrink:0;z-index:1
+}
+.flow-step.done .fs-num{background:rgba(16,185,129,.2);border-color:var(--green);color:var(--green)}
+.flow-step.active .fs-num{background:rgba(59,130,246,.2);border-color:var(--blue);color:var(--blue);box-shadow:0 0 10px rgba(59,130,246,.3)}
+.flow-step.blocked .fs-num{background:rgba(239,68,68,.15);border-color:var(--red);color:var(--red)}
+.fs-body{flex:1}
+.fs-title{font-size:11px;font-weight:600;color:var(--text);line-height:1.4}
+.fs-desc{font-size:10px;color:var(--sub);margin-top:3px;line-height:1.5}
+.fs-badge{display:inline-block;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;margin-left:6px;text-transform:uppercase;letter-spacing:.05em;vertical-align:middle}
+.fs-badge.act{background:rgba(59,130,246,.2);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.fs-badge.blk{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.fs-badge.done{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.fs-actions{display:flex;gap:6px;margin-top:8px}
+.fs-act-btn{padding:4px 10px;font-size:10px;border:1px solid var(--border);background:none;color:var(--sub);cursor:pointer;border-radius:5px;font-family:var(--font);transition:all .12s}
+.fs-act-btn:hover{border-color:rgba(255,255,255,.2);color:var(--text)}
+.fs-act-btn.go{background:rgba(16,185,129,.15);border-color:var(--green);color:var(--green)}
+
+/* intel report */
+.intel-class{font-size:9px;font-weight:800;letter-spacing:.12em;margin-bottom:8px;padding:3px 0;border-bottom:1px solid var(--border)}
+.intel-class.s{color:var(--red)}
+.intel-entry{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.intel-entry:last-child{border-bottom:none}
+.intel-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.intel-src{font-size:9px;font-weight:700;color:var(--amber);letter-spacing:.05em}
+.intel-time{font-size:9px;color:var(--muted);font-family:'Courier New',monospace}
+.intel-conf{font-size:8px;padding:1px 5px;border-radius:2px;font-weight:700}
+.intel-conf.hi{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.intel-conf.md{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.intel-body{font-size:11px;color:var(--text);line-height:1.6}
+
+/* target list */
+.tgt-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px}
+.tgt-row:last-child{border-bottom:none}
+.tgt-id{font-family:'Courier New',monospace;font-size:10px;color:var(--amber);width:60px;flex-shrink:0}
+.tgt-name{flex:1;color:var(--text);font-weight:500}
+.tgt-prio{font-size:9px;width:28px;text-align:center;font-weight:800}
+.tgt-stat{font-size:9px;padding:1px 6px;border-radius:2px}
+
+/* mini map in widget */
+.map-widget-svg{width:100%;border-radius:4px;background:#111d14}
+
+/* data table */
+.dt{width:100%;border-collapse:collapse;font-size:11px}
+.dt th{padding:6px 10px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:700}
+.dt td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)}
+.dt tr:last-child td{border-bottom:none}
+.dt tr:hover td{background:rgba(255,255,255,.02)}
+
+/* chart bars */
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-lbl{font-size:10px;color:var(--sub);width:80px;text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:14px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .6s ease-out}
+.bar-val{font-size:10px;color:var(--text);width:36px;text-align:right;flex-shrink:0;font-weight:600}
+
+/* system connector widget */
+.conn-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.conn-row:last-child{border-bottom:none}
+.conn-ico{font-size:16px;width:28px;text-align:center}
+.conn-info{flex:1}
+.conn-name{font-size:11px;font-weight:600;color:var(--text)}
+.conn-cap{font-size:9px;color:var(--muted);margin-top:2px}
+.conn-status{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700}
+
+/* widget drag */
+.widget[draggable="true"]{cursor:grab}
+.widget[draggable="true"]:active{cursor:grabbing}
+.widget.dragging{opacity:.5;border:1px dashed var(--green)!important}
+
+/* empty canvas state */
+.canvas-empty{
+  grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 20px;text-align:center;opacity:.6
+}
+.canvas-empty-icon{font-size:40px;margin-bottom:14px}
+.canvas-empty-title{font-size:16px;font-weight:700;color:var(--sub);margin-bottom:6px}
+.canvas-empty-sub{font-size:12px;color:var(--muted);max-width:300px;line-height:1.7}
+
+/* ── AI PANEL ── */
 #ai-panel{
-  background:var(--glass);border-left:1px solid var(--border);
-  backdrop-filter:blur(12px);display:flex;flex-direction:column
+  background:var(--panel);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;backdrop-filter:blur(12px)
 }
 .ai-hdr{
-  padding:13px 16px 11px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;gap:10px;flex-shrink:0
+  padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between
 }
-.ai-hdr-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:glow 2s infinite}
-.ai-hdr-title{font-size:12px;font-weight:700;color:var(--text)}
-.ai-hdr-sub{font-size:10px;color:var(--muted);margin-top:1px}
-#ai-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.ai-hdr-l{display:flex;align-items:center;gap:9px}
+.ai-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.ai-title{font-size:12px;font-weight:700}
+.ai-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.ai-mode-select{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--sub);font-family:var(--font);font-size:10px;padding:3px 8px;border-radius:5px;cursor:pointer;outline:none}
+
+#ai-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
 .amsg-role{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px}
 .abubble{padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.65}
-.abubble.ai{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.18);color:var(--text)}
-.abubble.user{background:rgba(59,130,246,.09);border:1px solid rgba(59,130,246,.2);color:var(--text)}
-.abubble.ctx{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);color:var(--amber);font-size:11px}
+.abubble.ai{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.18)}
+.abubble.user{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2)}
+.abubble.sys{background:rgba(139,92,246,.07);border:1px solid rgba(139,92,246,.2);color:#c4b5fd;font-size:11px}
+.abubble.gen{background:rgba(16,185,129,.04);border:1px solid rgba(16,185,129,.12);color:var(--green);font-size:11px}
 .athinking{display:flex;gap:5px;padding:10px 12px}
 .td{width:7px;height:7px;border-radius:50%;background:var(--green);opacity:.4;animation:tb .9s infinite}
 .td:nth-child(2){animation-delay:.15s}.td:nth-child(3){animation-delay:.3s}
 @keyframes tb{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
-.ai-quick{padding:9px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:5px;flex-shrink:0}
-.aq-btn{
-  padding:7px 11px;background:rgba(255,255,255,.03);border:1px solid var(--border);
-  border-radius:7px;color:var(--sub);cursor:pointer;font-size:11px;
-  text-align:left;transition:all .15s;font-family:inherit
+
+/* widget-gen preview inside AI bubble */
+.gen-preview{margin-top:8px;padding:8px;background:rgba(0,0,0,.3);border-radius:6px;border:1px solid rgba(16,185,129,.15)}
+.gen-preview-row{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:10px;color:var(--sub)}
+.gen-preview-row::before{content:'→';color:var(--green);font-size:10px}
+
+.ai-scenarios{padding:8px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.ai-sc-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:2px}
+.sc-btn{
+  padding:6px 11px;background:rgba(255,255,255,.03);border:1px solid var(--border);
+  border-radius:6px;color:var(--sub);cursor:pointer;font-size:11px;
+  text-align:left;font-family:var(--font);transition:all .14s
 }
-.aq-btn:hover{border-color:var(--green);color:var(--text);background:rgba(16,185,129,.06)}
+.sc-btn:hover{border-color:var(--green);color:var(--text);background:rgba(16,185,129,.06)}
+
 .ai-inp-row{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
 .ai-inp{
   flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);
-  border-radius:8px;color:var(--text);font-size:12px;font-family:inherit;
-  padding:8px 12px;outline:none;resize:none;min-height:36px;max-height:80px;transition:border-color .15s
+  border-radius:8px;color:var(--text);font-size:12px;font-family:var(--font);
+  padding:8px 12px;outline:none;resize:none;min-height:36px;max-height:100px;transition:border-color .15s
 }
 .ai-inp:focus{border-color:rgba(16,185,129,.5)}
 .ai-inp::placeholder{color:var(--muted)}
-.ai-send{
-  width:36px;height:36px;border-radius:8px;background:var(--green);
-  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:background .15s;flex-shrink:0
-}
+.ai-send{width:36px;height:36px;border-radius:8px;background:var(--green);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
 .ai-send:hover{background:#059669}
 .ai-send:disabled{opacity:.4;cursor:not-allowed}
 .ai-send svg{width:15px;height:15px;fill:white}
 
-/* ── TIMELINE ────────────────────────────────────────── */
-#timeline{
-  background:var(--glass);border-top:1px solid var(--border);
-  backdrop-filter:blur(12px);display:flex;flex-direction:column;overflow:hidden
+/* ── TIMELINE / WORKFLOW STRIP ── */
+#tl-strip{
+  background:rgba(10,13,20,.96);border-top:1px solid var(--border);
+  backdrop-filter:blur(12px);display:flex;flex-direction:column
 }
-.tl-hdr{
-  display:flex;align-items:center;gap:14px;padding:5px 16px;
-  border-bottom:1px solid var(--border);flex-shrink:0
-}
+.tl-hdr{display:flex;align-items:center;gap:14px;padding:5px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
 .tl-ttl{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
-.tl-leg{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--sub)}
-.tl-leg-sq{width:8px;height:8px;border-radius:2px}
-.tl-btns{margin-left:auto;display:flex;gap:6px}
-.tl-btn{
-  width:26px;height:26px;border-radius:5px;background:rgba(255,255,255,.05);
-  border:1px solid var(--border);color:var(--sub);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s
-}
-.tl-btn:hover{border-color:var(--green);color:var(--green)}
-.tl-btn.on{background:var(--green);border-color:var(--green);color:#000}
-#tl-track{
-  flex:1;overflow-x:auto;overflow-y:hidden;
-  scrollbar-width:thin;scrollbar-color:var(--muted) transparent;position:relative
-}
-#tl-inner{position:relative;height:100%;display:flex}
-.tl-day{
-  flex-shrink:0;width:120px;height:100%;
-  border-right:1px solid rgba(255,255,255,.05);position:relative
-}
-.tl-day-lbl{
-  font-size:9px;text-transform:uppercase;letter-spacing:.1em;
-  color:var(--muted);padding:5px 8px;position:relative;z-index:2
-}
+.tl-phase-key{display:flex;gap:10px}
+.tl-key-item{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--sub)}
+.tl-key-sq{width:8px;height:8px;border-radius:2px}
+.tl-r{margin-left:auto;display:flex;gap:6px}
+.tl-ib{width:26px;height:26px;border-radius:5px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--sub);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s;flex-shrink:0}
+.tl-ib:hover{border-color:var(--green);color:var(--green)}
+.tl-ib.on{background:var(--green);border-color:var(--green);color:#000}
+
+#tl-scroll{flex:1;overflow-x:auto;overflow-y:hidden;position:relative;scrollbar-width:thin;scrollbar-color:var(--muted) transparent}
+#tl-inner{position:relative;display:flex;height:100%}
+.tl-day{flex-shrink:0;width:120px;height:100%;border-right:1px solid rgba(255,255,255,.05);position:relative}
+.tl-day-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:5px 8px;position:relative;z-index:2}
 .phase-blk{
   position:absolute;top:22px;height:calc(100% - 30px);
   border-radius:6px;display:flex;align-items:center;padding:0 10px;
-  font-size:10px;font-weight:700;cursor:grab;white-space:nowrap;
-  user-select:none;box-shadow:0 2px 10px rgba(0,0,0,.5);
-  transition:opacity .15s,filter .15s;z-index:3
+  font-size:10px;font-weight:700;cursor:grab;white-space:nowrap;user-select:none;
+  box-shadow:0 2px 10px rgba(0,0,0,.5);z-index:3;transition:filter .15s
 }
 .phase-blk:hover{filter:brightness(1.15)}
-.phase-blk:active{cursor:grabbing;filter:brightness(1.2)}
-.ph-resize{
-  position:absolute;right:0;top:0;bottom:0;width:8px;
-  cursor:col-resize;background:rgba(0,0,0,.25);border-radius:0 6px 6px 0
-}
-#tl-now{
-  position:absolute;top:0;bottom:0;width:2px;
-  background:var(--green);box-shadow:0 0 10px var(--green);
-  z-index:10;pointer-events:none;transition:left .1s linear
-}
-#tl-now::before{
-  content:'NOW';position:absolute;top:5px;left:5px;
-  background:var(--green);color:#000;font-size:8px;font-weight:900;
-  padding:1px 4px;border-radius:2px;letter-spacing:.06em
-}
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+.phase-blk:active{cursor:grabbing}
+.ph-rsz{position:absolute;right:0;top:0;bottom:0;width:8px;cursor:col-resize;background:rgba(0,0,0,.2);border-radius:0 6px 6px 0}
+#tl-now{position:absolute;top:0;bottom:0;width:2px;background:var(--green);box-shadow:0 0 10px var(--green);z-index:10;pointer-events:none}
+#tl-now-lbl{position:absolute;top:5px;left:5px;background:var(--green);color:#000;font-size:8px;font-weight:900;padding:1px 4px;border-radius:2px;letter-spacing:.06em;white-space:nowrap}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
 </style>
 </head>
 <body>
@@ -295,778 +335,702 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 
 <!-- TOPBAR -->
 <header id="topbar">
-  <div style="display:flex;align-items:center;gap:10px">
-    <div class="op-dot"></div>
-    <div><div class="op-name">OP IRON SENTINEL</div><div class="op-class">SECRET // NOFORN</div></div>
+  <div class="tb-brand">
+    <div class="tb-pulse"></div>
+    <div><div class="tb-name">SENTINEL</div><div class="tb-sub">Mission Command Platform</div></div>
   </div>
-  <div class="modes">
-    <button class="mode-btn active" data-mode="analyze" onclick="setMode('analyze')">Analyze</button>
-    <button class="mode-btn" data-mode="plan" onclick="setMode('plan')">Plan</button>
-    <button class="mode-btn" data-mode="wargame" onclick="setMode('wargame')">Wargame</button>
-    <button class="mode-btn" data-mode="order" onclick="setMode('order')">Order</button>
-  </div>
-  <div class="topbar-r">
-    <span class="cl-badge">SECRET</span>
-    <span class="clock" id="clock">000000Z</span>
+  <nav class="tb-nav">
+    <button class="tb-link active" onclick="tbNav(this,'dashboard')">Dashboard</button>
+    <button class="tb-link" onclick="tbNav(this,'planning')">Planning</button>
+    <button class="tb-link" onclick="tbNav(this,'workflows')">Workflows</button>
+    <button class="tb-link" onclick="tbNav(this,'systems')">Systems</button>
+  </nav>
+  <div class="tb-r">
+    <div class="tb-sysbar" id="sys-bar">
+      <div class="sys-pip"><div class="dot on"></div>BFT</div>
+      <div class="sys-pip"><div class="dot on"></div>AFATDS</div>
+      <div class="sys-pip"><div class="dot warn"></div>DCGS</div>
+      <div class="sys-pip"><div class="dot off"></div>AMPS</div>
+    </div>
+    <span class="tb-cl-badge">SECRET</span>
+    <span class="tb-clock" id="clock">000000Z</span>
   </div>
 </header>
 
 <!-- WORKSPACE -->
 <div id="workspace">
 
-  <!-- LEFT PANEL -->
-  <div id="left-panel">
-    <div class="lp-head" id="lp-head">Intelligence</div>
-    <div id="lp-body"></div>
+  <!-- SYSTEMS -->
+  <div id="sys-panel">
+    <div class="sp-head">Systems &amp; Capabilities<button class="sp-add" onclick="addSystem()">+ Add</button></div>
+    <div id="sys-list">
+      <div class="sys-cat">Situational Awareness</div>
+      <div class="sys-item active" onclick="sysClick('bft')"><span class="sys-ico">🔵</span><div class="sys-info"><div class="sys-iname">BFT / FBCB2</div><div class="sys-isub">Blue Force Tracker</div></div><div class="sys-sdot on"></div></div>
+      <div class="sys-item" onclick="sysClick('cpof')"><span class="sys-ico">🎯</span><div class="sys-info"><div class="sys-iname">CPOF / ATAK</div><div class="sys-isub">Command Post</div></div><div class="sys-sdot on"></div></div>
+      <div class="sys-cat">Intelligence</div>
+      <div class="sys-item" onclick="sysClick('dcgs')"><span class="sys-ico">🔴</span><div class="sys-info"><div class="sys-iname">DCGS-A</div><div class="sys-isub">Intel Fusion</div></div><div class="sys-sdot warn"></div></div>
+      <div class="sys-item" onclick="sysClick('metoc')"><span class="sys-ico">🌤</span><div class="sys-info"><div class="sys-iname">METOC</div><div class="sys-isub">Weather Service</div></div><div class="sys-sdot on"></div></div>
+      <div class="sys-cat">Fires</div>
+      <div class="sys-item" onclick="sysClick('afatds')"><span class="sys-ico">🔥</span><div class="sys-info"><div class="sys-iname">AFATDS</div><div class="sys-isub">Fire Support</div></div><div class="sys-sdot on"></div></div>
+      <div class="sys-cat">Sustainment</div>
+      <div class="sys-item" onclick="sysClick('gcss')"><span class="sys-ico">📦</span><div class="sys-info"><div class="sys-iname">GCSS-A</div><div class="sys-isub">Logistics</div></div><div class="sys-sdot on"></div></div>
+      <div class="sys-cat">Aviation</div>
+      <div class="sys-item" onclick="sysClick('amps')"><span class="sys-ico">✈️</span><div class="sys-info"><div class="sys-iname">AMPS</div><div class="sys-isub">Aviation Planning</div></div><div class="sys-sdot off"></div></div>
+      <div class="sys-cat">Communications</div>
+      <div class="sys-item" onclick="sysClick('wint')"><span class="sys-ico">📡</span><div class="sys-info"><div class="sys-iname">WIN-T / PACE</div><div class="sys-isub">Network &amp; Comms</div></div><div class="sys-sdot on"></div></div>
+    </div>
   </div>
 
-  <!-- MAP -->
-  <div id="map-wrap">
-
-    <!-- SVG TERRAIN MAP — viewBox 0 0 1000 680, no external dependencies -->
-    <svg id="map-svg" viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid slice"
-         xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <!-- Radial vignette -->
-        <radialGradient id="vignette" cx="50%" cy="50%" r="72%">
-          <stop offset="0%" stop-color="transparent"/>
-          <stop offset="100%" stop-color="rgba(0,0,0,0.52)"/>
-        </radialGradient>
-        <!-- Valley gradient SW→NE -->
-        <linearGradient id="valley-grad" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#162818"/>
-          <stop offset="45%" stop-color="#1a3020"/>
-          <stop offset="100%" stop-color="#152718"/>
-        </linearGradient>
-        <!-- Hill shading for west ridge -->
-        <linearGradient id="west-shade" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="rgba(0,0,0,0.30)"/>
-          <stop offset="100%" stop-color="rgba(0,0,0,0.05)"/>
-        </linearGradient>
-        <!-- Hill shading for east ridge -->
-        <linearGradient id="east-shade" x1="100%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="rgba(0,0,0,0.28)"/>
-          <stop offset="100%" stop-color="rgba(0,0,0,0.04)"/>
-        </linearGradient>
-      </defs>
-
-      <!-- ═══ TERRAIN BASE ═════════════════════════════════════ -->
-      <!-- Overall base fill -->
-      <rect x="0" y="0" width="1000" height="680" fill="#111d14"/>
-
-      <!-- West ridge mass (RIDGE ALPHA side) — left ~35% -->
-      <polygon points="0,0 350,0 395,60 385,150 370,260 355,380 335,490 305,590 265,660 200,680 100,680 0,680"
-               fill="#0d1710"/>
-      <!-- West ridge hill-shade overlay -->
-      <polygon points="0,0 310,0 345,80 330,200 312,320 292,440 268,560 230,660 150,680 0,680"
-               fill="url(#west-shade)"/>
-
-      <!-- East ridge mass — right ~30% -->
-      <polygon points="700,0 1000,0 1000,680 780,680 755,580 738,460 728,340 733,210 724,110 710,50"
-               fill="#0d1710"/>
-      <!-- East ridge hill-shade overlay -->
-      <polygon points="755,0 1000,0 1000,680 820,680 796,560 780,420 784,280 770,140 756,40"
-               fill="url(#east-shade)"/>
-
-      <!-- Valley floor — lighter strip running SW to NE through center -->
-      <polygon points="245,680 308,560 374,440 445,322 522,213 605,126 686,62 740,20 800,0 860,0 816,22 762,58 688,110 608,176 526,268 450,380 378,497 314,610 272,680"
-               fill="url(#valley-grad)"/>
-      <!-- Valley center — slightly brighter core -->
-      <polygon points="278,680 338,568 402,456 470,344 546,243 622,162 695,96 742,52 782,20 826,0 864,0 830,18 793,42 742,84 668,148 594,222 516,318 440,432 368,546 318,660 288,680"
-               fill="rgba(26,52,30,0.50)"/>
-
-      <!-- Forest patches — irregular darker-green ellipses -->
-      <ellipse cx="148" cy="230" rx="88" ry="56" fill="#0c1c0f" opacity="0.76"/>
-      <ellipse cx="205" cy="355" rx="68" ry="50" fill="#0c1c0f" opacity="0.72"/>
-      <ellipse cx="118" cy="462" rx="78" ry="54" fill="#0e1e11" opacity="0.73"/>
-      <ellipse cx="298" cy="192" rx="58" ry="40" fill="#0e1f11" opacity="0.66"/>
-      <ellipse cx="475" cy="425" rx="62" ry="44" fill="#0d1d10" opacity="0.60"/>
-      <ellipse cx="558" cy="338" rx="52" ry="36" fill="#0c1c0f" opacity="0.56"/>
-      <ellipse cx="808" cy="316" rx="92" ry="64" fill="#0c1c0f" opacity="0.73"/>
-      <ellipse cx="865" cy="175" rx="72" ry="52" fill="#0d1e10" opacity="0.69"/>
-      <ellipse cx="755" cy="482" rx="82" ry="56" fill="#0c1c0f" opacity="0.66"/>
-      <ellipse cx="438" cy="556" rx="56" ry="39" fill="#0d1d10" opacity="0.58"/>
-      <ellipse cx="168" cy="542" rx="50" ry="34" fill="#0c1c0f" opacity="0.60"/>
-      <ellipse cx="620" cy="498" rx="44" ry="30" fill="#0d1d10" opacity="0.52"/>
-
-      <!-- ═══ CONTOUR LINES ════════════════════════════════════ -->
-      <!-- RIDGE ALPHA contours centered at approx (360,340) -->
-      <ellipse cx="360" cy="340" rx="36" ry="27" fill="none" stroke="#3d4a30" stroke-width="0.6" opacity="0.62"/>
-      <ellipse cx="360" cy="340" rx="68" ry="52" fill="none" stroke="#3d4a30" stroke-width="0.6" opacity="0.56"/>
-      <ellipse cx="360" cy="340" rx="106" ry="80" fill="none" stroke="#3d4a30" stroke-width="0.6" opacity="0.49"/>
-      <ellipse cx="360" cy="340" rx="152" ry="116" fill="none" stroke="#3d4a30" stroke-width="0.6" opacity="0.40"/>
-      <ellipse cx="360" cy="340" rx="200" ry="152" fill="none" stroke="#3d4a30" stroke-width="0.5" opacity="0.30"/>
-
-      <!-- East ridge contours — organic irregular paths -->
-      <path d="M822,118 Q868,88 898,128 Q922,172 902,218 Q880,264 840,254 Q800,244 792,198 Q784,152 822,118Z"
-            fill="none" stroke="#3d4a30" stroke-width="0.6" opacity="0.59"/>
-      <path d="M806,80 Q864,44 908,98 Q950,154 922,214 Q894,272 842,280 Q786,288 762,230 Q738,172 762,118 Q787,64 806,80Z"
-            fill="none" stroke="#3d4a30" stroke-width="0.6" opacity="0.49"/>
-      <path d="M794,44 Q864,0 924,66 Q982,134 948,214 Q914,292 848,306 Q778,320 744,250 Q710,180 736,108 Q762,36 794,44Z"
-            fill="none" stroke="#3d4a30" stroke-width="0.6" opacity="0.40"/>
-
-      <!-- West ridge additional contours -->
-      <path d="M58,118 Q108,78 154,108 Q196,136 186,190 Q176,242 132,254 Q86,266 60,228 Q34,190 58,118Z"
-            fill="none" stroke="#3d4a30" stroke-width="0.6" opacity="0.43"/>
-      <path d="M36,80 Q106,32 164,74 Q222,114 210,196 Q198,276 140,292 Q80,308 44,260 Q8,212 36,80Z"
-            fill="none" stroke="#3d4a30" stroke-width="0.6" opacity="0.34"/>
-
-      <!-- Valley floor contour lines — gentle, wider-spaced -->
-      <path d="M310,600 Q356,530 410,460 Q466,388 528,310 Q585,240 645,175"
-            fill="none" stroke="#2e3d22" stroke-width="0.5" opacity="0.35" stroke-dasharray="20 8"/>
-
-      <!-- ═══ RIVER ════════════════════════════════════════════ -->
-      <!-- Main river through valley — glow + line -->
-      <path d="M298,680 Q318,638 333,598 Q349,556 364,518 Q381,476 398,438 Q414,398 432,362 Q453,325 474,293 Q495,260 518,228 Q542,194 568,166 Q592,140 620,118 Q648,98 675,80"
-            fill="none" stroke="#122840" stroke-width="5" opacity="0.65"/>
-      <path d="M298,680 Q318,638 333,598 Q349,556 364,518 Q381,476 398,438 Q414,398 432,362 Q453,325 474,293 Q495,260 518,228 Q542,194 568,166 Q592,140 620,118 Q648,98 675,80"
-            fill="none" stroke="#1e4d78" stroke-width="2.2" opacity="0.72"/>
-      <path d="M298,680 Q318,638 333,598 Q349,556 364,518 Q381,476 398,438 Q414,398 432,362 Q453,325 474,293 Q495,260 518,228 Q542,194 568,166 Q592,140 620,118 Q648,98 675,80"
-            fill="none" stroke="#2563a8" stroke-width="0.8" opacity="0.40"/>
-      <!-- Tributary -->
-      <path d="M258,640 Q276,608 288,576 Q302,542 311,508 Q318,472 320,442"
-            fill="none" stroke="#122840" stroke-width="3" opacity="0.55"/>
-      <path d="M258,640 Q276,608 288,576 Q302,542 311,508 Q318,472 320,442"
-            fill="none" stroke="#1e4d78" stroke-width="1.4" opacity="0.55"/>
-
-      <!-- ═══ RIDGE ALPHA PEAK ══════════════════════════════════ -->
-      <ellipse cx="360" cy="340" rx="30" ry="22" fill="#09140a" opacity="0.82"/>
-      <ellipse cx="360" cy="340" rx="18" ry="13" fill="#060d07" opacity="0.92"/>
-      <!-- Peak cross-hatch highlight -->
-      <line x1="350" y1="333" x2="370" y2="347" stroke="#1e3020" stroke-width="0.5" opacity="0.5"/>
-      <line x1="370" y1="333" x2="350" y2="347" stroke="#1e3020" stroke-width="0.5" opacity="0.5"/>
-
-      <!-- ═══ MILITARY GRID ════════════════════════════════════ -->
-      <!-- Vertical grid lines -->
-      <line x1="100" y1="0" x2="100" y2="680" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="200" y1="0" x2="200" y2="680" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="300" y1="0" x2="300" y2="680" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="400" y1="0" x2="400" y2="680" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="500" y1="0" x2="500" y2="680" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="600" y1="0" x2="600" y2="680" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="700" y1="0" x2="700" y2="680" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="800" y1="0" x2="800" y2="680" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="900" y1="0" x2="900" y2="680" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <!-- Horizontal grid lines -->
-      <line x1="0" y1="100" x2="1000" y2="100" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="0" y1="200" x2="1000" y2="200" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="0" y1="300" x2="1000" y2="300" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="0" y1="400" x2="1000" y2="400" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="0" y1="500" x2="1000" y2="500" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <line x1="0" y1="600" x2="1000" y2="600" stroke="rgba(255,255,255,0.055)" stroke-width="0.5"/>
-      <!-- Grid labels top -->
-      <text x="97"  y="12" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace" text-anchor="middle">85</text>
-      <text x="197" y="12" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace" text-anchor="middle">86</text>
-      <text x="297" y="12" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace" text-anchor="middle">87</text>
-      <text x="397" y="12" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace" text-anchor="middle">88</text>
-      <text x="497" y="12" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace" text-anchor="middle">89</text>
-      <text x="597" y="12" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace" text-anchor="middle">90</text>
-      <text x="697" y="12" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace" text-anchor="middle">91</text>
-      <text x="797" y="12" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace" text-anchor="middle">92</text>
-      <text x="897" y="12" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace" text-anchor="middle">93</text>
-      <!-- Grid labels left -->
-      <text x="8" y="103" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace">12</text>
-      <text x="8" y="203" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace">11</text>
-      <text x="8" y="303" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace">10</text>
-      <text x="8" y="403" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace">09</text>
-      <text x="8" y="503" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace">08</text>
-      <text x="8" y="603" font-size="9" fill="rgba(255,255,255,0.20)" font-family="'Courier New',monospace">07</text>
-
-      <!-- ═══ ROUTES ════════════════════════════════════════════ -->
-      <!-- ROUTE BLUE (AA1) shadow then main line -->
-      <polyline points="260,640 340,530 420,410 490,310 610,200 650,160"
-                fill="none" stroke="#1e3a8a" stroke-width="5" opacity="0.45" stroke-linecap="round" stroke-linejoin="round"/>
-      <polyline points="260,640 340,530 420,410 490,310 610,200 650,160"
-                fill="none" stroke="#3b82f6" stroke-width="2.2" opacity="0.88" stroke-linecap="round" stroke-linejoin="round"
-                style="cursor:pointer" onclick="onFeature('rblue')"/>
-      <!-- Route Blue label -->
-      <g style="cursor:pointer" onclick="onFeature('rblue')">
-        <rect x="402" y="414" width="118" height="16" rx="3" fill="rgba(0,0,0,0.74)"/>
-        <text x="461" y="426" font-size="9" fill="#93c5fd" font-family="'Courier New',monospace"
-              text-anchor="middle" font-weight="700">AA1 · ROUTE BLUE</text>
-      </g>
-
-      <!-- Route AA2 (dismounted) shadow + dashed green -->
-      <polyline points="260,640 290,560 310,460 340,340"
-                fill="none" stroke="#064e3b" stroke-width="4" opacity="0.45" stroke-linecap="round" stroke-linejoin="round"/>
-      <polyline points="260,640 290,560 310,460 340,340"
-                fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="9 5" opacity="0.84"
-                stroke-linecap="round" stroke-linejoin="round"
-                style="cursor:pointer" onclick="onFeature('raa2')"/>
-      <!-- AA2 label -->
-      <g style="cursor:pointer" onclick="onFeature('raa2')">
-        <rect x="294" y="487" width="140" height="16" rx="3" fill="rgba(0,0,0,0.74)"/>
-        <text x="364" y="499" font-size="9" fill="#6ee7b7" font-family="'Courier New',monospace"
-              text-anchor="middle" font-weight="700">AA2 · WADIS (dismounted)</text>
-      </g>
-
-      <!-- ═══ ADA THREAT RING ══════════════════════════════════ -->
-      <!-- ZSU at 62%×1000=620, 36%×680=245 -->
-      <circle id="ada-ring" cx="620" cy="245" r="158"
-              fill="rgba(239,68,68,0.04)"
-              stroke="#ef4444" stroke-width="1.5" stroke-dasharray="8 4"
-              opacity="0.55"/>
-      <!-- Inner ring - tighter kill zone -->
-      <circle id="ada-ring-inner" cx="620" cy="245" r="78"
-              fill="rgba(239,68,68,0.03)"
-              stroke="#ef4444" stroke-width="0.8" stroke-dasharray="4 6"
-              opacity="0.35"/>
-
-      <!-- ═══ PHASE LINES ═══════════════════════════════════════ -->
-      <!-- PL AMBER at y=560 -->
-      <line x1="28" y1="560" x2="972" y2="560"
-            stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="7 5" opacity="0.78"
-            style="cursor:pointer" onclick="onFeature('plAmber')"/>
-      <g style="cursor:pointer" onclick="onFeature('plAmber')">
-        <rect x="32" y="548" width="70" height="16" rx="3"
-              fill="rgba(0,0,0,0.78)" stroke="rgba(245,158,11,0.55)" stroke-width="1"/>
-        <text x="67" y="560" font-size="10" fill="#f59e0b" font-family="'Courier New',monospace"
-              text-anchor="middle" font-weight="700" dominant-baseline="middle">PL AMBER</text>
-      </g>
-
-      <!-- PL COPPER at y=120 -->
-      <line x1="28" y1="120" x2="972" y2="120"
-            stroke="#10b981" stroke-width="1.5" stroke-dasharray="7 5" opacity="0.78"
-            style="cursor:pointer" onclick="onFeature('plCopper')"/>
-      <g style="cursor:pointer" onclick="onFeature('plCopper')">
-        <rect x="32" y="108" width="74" height="16" rx="3"
-              fill="rgba(0,0,0,0.78)" stroke="rgba(16,185,129,0.55)" stroke-width="1"/>
-        <text x="69" y="120" font-size="10" fill="#10b981" font-family="'Courier New',monospace"
-              text-anchor="middle" font-weight="700" dominant-baseline="middle">PL COPPER</text>
-      </g>
-
-      <!-- ═══ VIGNETTE ══════════════════════════════════════════ -->
-      <rect x="0" y="0" width="1000" height="680" fill="url(#vignette)" pointer-events="none"/>
-    </svg>
-
-    <!-- HTML OVERLAY MARKERS — absolutely positioned, pointer-events managed per marker -->
-    <div id="map-markers">
-
-      <!-- OBJ EAGLE at (65%, 23%) -->
-      <div class="mmarker" style="left:65%;top:23%" onclick="onFeature('obj')">
-        <div class="mmarker-sym"><div class="sym-diamond"></div></div>
-        <div class="mmarker-lbl" style="color:#ef4444">OBJ EAGLE</div>
+  <!-- CANVAS -->
+  <div id="canvas-wrap">
+    <div id="canvas-toolbar">
+      <div><div class="ct-label">Active Scenario</div><div class="ct-scenario" id="ct-scenario">OP IRON SENTINEL — Mission Command</div></div>
+      <div class="ct-btns">
+        <button class="ct-btn" onclick="clearCanvas()">Clear Canvas</button>
+        <button class="ct-btn" onclick="exportLayout()">Export</button>
+        <button class="ct-btn primary" onclick="promptFocus()">+ Ask AI to Build</button>
       </div>
-
-      <!-- RIDGE ALPHA at (36%, 50%) -->
-      <div class="mmarker" style="left:36%;top:50%" onclick="onFeature('ridge')">
-        <div class="mmarker-sym"><div class="sym-triangle"></div></div>
-        <div class="mmarker-lbl" style="color:#10b981">RIDGE ALPHA</div>
-      </div>
-
-      <!-- Enemy BP1 at (57%, 40%) -->
-      <div class="mmarker" style="left:57%;top:40%" onclick="onFeature('bp')">
-        <div class="mmarker-sym"><div class="sym-bp">BP</div></div>
-        <div class="mmarker-lbl" style="color:#fca5a5;font-size:8px">BP1</div>
-      </div>
-
-      <!-- Enemy BP2 at (66%, 30%) -->
-      <div class="mmarker" style="left:66%;top:30%" onclick="onFeature('bp')">
-        <div class="mmarker-sym"><div class="sym-bp">BP</div></div>
-        <div class="mmarker-lbl" style="color:#fca5a5;font-size:8px">BP2</div>
-      </div>
-
-      <!-- Enemy CP at (72%, 19%) -->
-      <div class="mmarker" style="left:72%;top:19%" onclick="onFeature('cp')">
-        <div class="mmarker-sym"><div class="sym-cp">CP</div></div>
-        <div class="mmarker-lbl" style="color:#fca5a5;font-size:8px">EN BN CP</div>
-      </div>
-
-      <!-- ZSU/ADA at (62%, 36%) -->
-      <div class="mmarker" style="left:62%;top:36%" onclick="onFeature('ada')">
-        <div class="mmarker-sym"><div class="sym-ada">ADA</div></div>
-        <div class="mmarker-lbl" style="color:#fca5a5;font-size:8px">ZSU-23-4</div>
-      </div>
-
-      <!-- Staging at (26%, 88%) -->
-      <div class="mmarker" style="left:26%;top:88%" onclick="onFeature('staging')">
-        <div class="mmarker-sym"><div class="sym-sp">SP</div></div>
-        <div class="mmarker-lbl" style="color:#93c5fd;font-size:8px">Staging</div>
-      </div>
-
-      <!-- LZ FALCON at (59%, 29%) — only in plan/order modes -->
-      <div class="mmarker lz-marker" id="lz-falcon" style="left:59%;top:29%;display:none" onclick="onFeature('lz',{name:'FALCON'})">
-        <div class="mmarker-sym"><div class="sym-lz">H</div></div>
-        <div class="mmarker-lbl" style="color:rgba(255,255,255,0.80);font-size:8px">LZ FALCON</div>
-      </div>
-
-      <!-- LZ HAWK at (54%, 39%) — only in plan/order modes -->
-      <div class="mmarker lz-marker" id="lz-hawk" style="left:54%;top:39%;display:none" onclick="onFeature('lz',{name:'HAWK'})">
-        <div class="mmarker-sym"><div class="sym-lz">H</div></div>
-        <div class="mmarker-lbl" style="color:rgba(255,255,255,0.80);font-size:8px">LZ HAWK</div>
-      </div>
-
-      <!-- Placed units container -->
-      <div id="placed-units"></div>
-
-    </div><!-- /#map-markers -->
-
-    <!-- Map legend -->
-    <div id="legend">
-      <div class="leg-row"><div class="leg-dot" style="background:#ef4444"></div>Enemy force</div>
-      <div class="leg-row"><div class="leg-dot" style="background:#3b82f6"></div>Friendly unit</div>
-      <div class="leg-row"><div class="leg-dot" style="background:#f59e0b;border-radius:0;transform:rotate(45deg)"></div>Objective</div>
-      <div class="leg-row"><div class="leg-line" style="border-top:2px dashed #f59e0b;height:0"></div>Phase line</div>
-      <div class="leg-row"><div class="leg-line" style="background:#3b82f6;height:2px"></div>Route</div>
     </div>
-
-  </div><!-- /#map-wrap -->
+    <div id="canvas"></div>
+  </div>
 
   <!-- AI PANEL -->
   <div id="ai-panel">
     <div class="ai-hdr">
-      <div class="ai-hdr-dot"></div>
-      <div><div class="ai-hdr-title">AI Planning Assistant</div><div class="ai-hdr-sub">Click map elements for analysis</div></div>
+      <div class="ai-hdr-l"><div class="ai-dot"></div><div><div class="ai-title">AI Command Interface</div><div class="ai-sub">Describe your need — I'll build the UI</div></div></div>
     </div>
     <div id="ai-msgs"></div>
-    <div class="ai-quick" id="ai-quick"></div>
+    <div class="ai-scenarios" id="ai-scenarios">
+      <div class="ai-sc-lbl">Quick Scenarios</div>
+    </div>
     <div class="ai-inp-row">
-      <textarea class="ai-inp" id="ai-inp" placeholder="Ask about the operation…" rows="1" onkeydown="handleKey(event)"></textarea>
-      <button class="ai-send" id="ai-send-btn" onclick="sendMsg()">
-        <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
-      </button>
+      <textarea class="ai-inp" id="ai-inp" placeholder="Describe your mission need, request a dashboard, or ask for analysis…" rows="2" onkeydown="handleKey(event)"></textarea>
+      <button class="ai-send" id="ai-send-btn" onclick="sendMsg()"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
     </div>
   </div>
 
 </div><!-- /#workspace -->
 
-<!-- TIMELINE -->
-<div id="timeline">
+<!-- TIMELINE STRIP -->
+<div id="tl-strip">
   <div class="tl-hdr">
     <span class="tl-ttl">Operation Timeline</span>
-    <span class="tl-leg"><span class="tl-leg-sq" style="background:#6366f1"></span>Planning</span>
-    <span class="tl-leg"><span class="tl-leg-sq" style="background:#10b981"></span>Movement</span>
-    <span class="tl-leg"><span class="tl-leg-sq" style="background:#ef4444"></span>Action</span>
-    <span class="tl-leg"><span class="tl-leg-sq" style="background:#f59e0b"></span>Consolidation</span>
-    <div class="tl-btns">
-      <button class="tl-btn" id="play-btn" onclick="tlToggle()" title="Play/Pause">▶</button>
-      <button class="tl-btn" onclick="tlReset()" title="Reset">↺</button>
+    <div class="tl-phase-key">
+      <span class="tl-key-item"><span class="tl-key-sq" style="background:#6366f1"></span>Planning</span>
+      <span class="tl-key-item"><span class="tl-key-sq" style="background:#10b981"></span>Movement</span>
+      <span class="tl-key-item"><span class="tl-key-sq" style="background:#ef4444"></span>Action</span>
+      <span class="tl-key-item"><span class="tl-key-sq" style="background:#f59e0b"></span>Consolidation</span>
+    </div>
+    <div class="tl-r">
+      <button class="tl-ib" id="play-btn" onclick="tlToggle()" title="Play">▶</button>
+      <button class="tl-ib" onclick="tlReset()" title="Reset">↺</button>
     </div>
   </div>
-  <div id="tl-track"><div id="tl-inner"></div></div>
+  <div id="tl-scroll"><div id="tl-inner"></div></div>
 </div>
 
 </div><!-- /#app -->
-
 <script>
-/* ═══════════════════════════════════════════════
-   CLOCK
-═══════════════════════════════════════════════ */
-function tick(){
-  const n=new Date(),p=v=>String(v).padStart(2,'0');
-  document.getElementById('clock').textContent=`${p(n.getUTCDate())}${p(n.getUTCHours())}${p(n.getUTCMinutes())}Z`;
-}
+/* ═══ CLOCK ═══════════════════════════════════════════ */
+function tick(){const n=new Date(),p=v=>String(v).padStart(2,'0');document.getElementById('clock').textContent=`${p(n.getUTCDate())}${p(n.getUTCHours())}${p(n.getUTCMinutes())}Z`;}
 tick();setInterval(tick,1000);
 
-/* ═══════════════════════════════════════════════
-   NATO SVG SYMBOLS
-═══════════════════════════════════════════════ */
-const SYM={
-  inf:`<svg viewBox="0 0 40 28" fill="none" stroke="#93c5fd" stroke-width="2">
-    <rect x="1" y="1" width="38" height="26" rx="1"/>
-    <line x1="1" y1="1" x2="39" y2="27"/><line x1="39" y1="1" x2="1" y2="27"/>
-  </svg>`,
-  arty:`<svg viewBox="0 0 40 28" fill="none" stroke="#93c5fd" stroke-width="2">
-    <rect x="1" y="1" width="38" height="26" rx="1"/>
-    <circle cx="20" cy="14" r="7" fill="rgba(59,130,246,.3)"/>
-  </svg>`,
-  eng:`<svg viewBox="0 0 40 28" fill="none" stroke="#93c5fd" stroke-width="2">
-    <rect x="1" y="1" width="38" height="26" rx="1"/>
-    <rect x="8" y="7" width="24" height="14" rx="1" fill="rgba(59,130,246,.2)"/>
-    <text x="20" y="20" text-anchor="middle" font-size="11" fill="#93c5fd" stroke="none" font-weight="700">E</text>
-  </svg>`,
-  isr:`<svg viewBox="0 0 40 28" fill="none" stroke="#93c5fd" stroke-width="2">
-    <rect x="1" y="1" width="38" height="26" rx="1"/>
-    <path d="M10 14 Q20 4 30 14 Q20 24 10 14Z" fill="rgba(59,130,246,.25)"/>
-  </svg>`,
-};
-
-/* ═══════════════════════════════════════════════
-   UNITS DATA
-═══════════════════════════════════════════════ */
-const UNITS=[
-  {id:'aco',  name:'A CO',   sub:'2-14 IN · 120 PAX',     type:'inf',  placed:false},
-  {id:'bco',  name:'B CO',   sub:'2-14 IN · 110 PAX',     type:'inf',  placed:false},
-  {id:'cco',  name:'C CO',   sub:'Air Assault · 105 PAX',  type:'inf',  placed:false},
-  {id:'artb', name:'A BTY',  sub:'2-17 FA · 6× M109A7',   type:'arty', placed:false},
-  {id:'enco', name:'172 EN', sub:'Combat Engineer',        type:'eng',  placed:false},
-  {id:'isr',  name:'ISR Plt',sub:'2× RQ-7B Shadow',       type:'isr',  placed:false},
-];
-
-/* ═══════════════════════════════════════════════
-   INTEL / DP / ORDER DATA
-═══════════════════════════════════════════════ */
-const INTEL_ITEMS=[
-  {ico:'🔴',name:'Enemy BP ×2',     sub:'Confirmed — RIDGE ALPHA fwd slope'},
-  {ico:'🔴',name:'ZSU-23-4 ADA',    sub:'2× confirmed, vic MG 344-893'},
-  {ico:'🟡',name:'Armor Reserve',   sub:'Estimated — AXIS BEAR'},
-  {ico:'🟡',name:'Enemy BN CP',     sub:'Vic MG 346-893, unconfirmed'},
-  {ico:'⚪',name:'EW/Jam Node',     sub:'Unconfirmed — possible MG 347-890'},
-];
-const DP_ITEMS=[
-  {ico:'🔴',name:'DP-1',sub:'ADA active 30min post-SEAD → Branch COA 1'},
-  {ico:'🟡',name:'DP-2',sub:'Armor on AXIS BEAR → CAS + B CO screen'},
-  {ico:'🟢',name:'DP-3',sub:'C CO SECURE report → exploit PL COPPER'},
-  {ico:'🔴',name:'DP-4',sub:'RIDGE ALPHA lost → request BDE reserve'},
-];
-const ORDER_ITEMS=[
-  {ico:'✅',name:'A CO',   sub:'Infiltrate AA2 → seize RIDGE ALPHA H-1'},
-  {ico:'✅',name:'B CO',   sub:'Feint AXIS BLUE → fix enemy BPs'},
-  {ico:'✅',name:'C CO',   sub:'Air assault LZ FALCON → seize OBJ EAGLE'},
-  {ico:'✅',name:'A BTY',  sub:'SEAD H-35min → PREP OBJ EAGLE H-15min'},
-  {ico:'✅',name:'172 EN', sub:'AA2 route clearance → breach PL AMBER'},
-];
-
-/* ═══════════════════════════════════════════════
-   MODES
-═══════════════════════════════════════════════ */
-let currentMode='analyze';
-
-function setMode(m){
-  currentMode=m;
-  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
-
-  // LZ markers — only visible in plan / order
-  const showLZ=(m==='plan'||m==='order');
-  document.querySelectorAll('.lz-marker').forEach(el=>{
-    el.style.display=showLZ?'flex':'none';
-  });
-
-  // ADA rings — always visible in analyze/wargame, hidden in plan/order
-  const showADA=(m==='analyze'||m==='wargame');
-  const adaRing=document.getElementById('ada-ring');
-  const adaInner=document.getElementById('ada-ring-inner');
-  if(adaRing)  adaRing.style.display =showADA?'':'none';
-  if(adaInner) adaInner.style.display=showADA?'':'none';
-
-  renderLP(m);
-  renderQuick(m);
-
-  const info={
-    analyze:'Analyze mode — map shows enemy disposition and ADA coverage. Click any element for AI analysis.',
-    plan:'Plan mode — drag unit blocks from the left panel onto the map to position forces. LZ markers are now visible.',
-    wargame:'Wargame mode — review decision points. Play the timeline to step through phases. Click a DP for branch analysis.',
-    order:'Order mode — approved COA 2 loaded. I can generate the full OPORD or any annex on request.',
-  };
-  aiMsg(info[m],'ai');
+/* ═══ NAV ══════════════════════════════════════════════ */
+function tbNav(el,view){
+  document.querySelectorAll('.tb-link').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('ct-scenario').textContent={
+    dashboard:'OP IRON SENTINEL — Mission Command',
+    planning:'OP IRON SENTINEL — MDMP Planning',
+    workflows:'Workflow Builder',
+    systems:'System Integration Hub'
+  }[view]||'';
 }
 
-function renderLP(mode){
-  document.getElementById('lp-head').textContent=
-    {analyze:'Intelligence',plan:'Force Pool — Drag to Map',wargame:'Decision Points',order:'Task Organization'}[mode];
-  const b=document.getElementById('lp-body');
+/* ═══ WIDGET SYSTEM ═════════════════════════════════════ */
+const canvas = document.getElementById('canvas');
+let widgetCount = 0;
 
-  if(mode==='plan'){
-    b.innerHTML=UNITS.map(u=>`
-      <div class="ucard ${u.placed?'placed':''}" id="uc-${u.id}"
-        draggable="${!u.placed}" ondragstart="uDrag(event,'${u.id}')">
-        <div class="nato">${SYM[u.type]||SYM.inf}</div>
-        <div class="ucard-name">${u.name}</div>
-        <div class="ucard-sub">${u.sub}</div>
-      </div>`).join('');
-  } else if(mode==='analyze'){
-    b.innerHTML=INTEL_ITEMS.map(i=>`
-      <div class="list-item" onclick="onFeature('intel',{n:'${i.name}'})">
-        <div class="list-item-ico">${i.ico}</div>
-        <div><div class="list-item-name">${i.name}</div><div class="list-item-sub">${i.sub}</div></div>
-      </div>`).join('');
-  } else if(mode==='wargame'){
-    b.innerHTML=DP_ITEMS.map(d=>`
-      <div class="list-item" onclick="onFeature('dp',{n:'${d.name}'})">
-        <div class="list-item-ico">${d.ico}</div>
-        <div><div class="list-item-name">${d.name}</div><div class="list-item-sub">${d.sub}</div></div>
-      </div>`).join('');
-  } else {
-    b.innerHTML=ORDER_ITEMS.map(o=>`
-      <div class="list-item" style="cursor:default;border-color:rgba(16,185,129,.2);background:rgba(16,185,129,.04)">
-        <div class="list-item-ico">${o.ico}</div>
-        <div><div class="list-item-name">${o.name}</div><div class="list-item-sub">${o.sub}</div></div>
-      </div>`).join('');
+const WIDGET_COLORS = {
+  status:'#3b82f6',intel:'#f59e0b',fires:'#ef4444',
+  logistics:'#8b5cf6',aviation:'#06b6d4',workflow:'#10b981',
+  metrics:'#94a3b8',map:'#10b981',systems:'#6366f1',chart:'#f59e0b'
+};
+
+function makeWidget(cfg){
+  widgetCount++;
+  const id = 'w'+widgetCount;
+  const el = document.createElement('div');
+  el.className = 'widget';
+  el.id = id;
+  el.draggable = true;
+  if(cfg.span) el.dataset.span = cfg.span;
+  const color = WIDGET_COLORS[cfg.type]||'#94a3b8';
+  const actions = (cfg.actions||[]).map(a=>`<button class="w-btn" onclick="${a.fn}">${a.label}</button>`).join('');
+  el.innerHTML = `
+    <div class="widget-hdr">
+      <div class="wh-left">
+        <div class="w-type-dot" style="background:${color}"></div>
+        <div class="w-title">${cfg.title||'Widget'}</div>
+      </div>
+      <div class="w-actions">
+        ${actions}
+        <button class="w-btn" onclick="removeWidget('${id}')" title="Remove">✕</button>
+      </div>
+    </div>
+    <div class="widget-body">${renderBody(cfg)}</div>`;
+  // drag to reorder
+  el.addEventListener('dragstart',e=>{e.dataTransfer.setData('wid',id);el.classList.add('dragging');});
+  el.addEventListener('dragend',()=>el.classList.remove('dragging'));
+  canvas.addEventListener('dragover',e=>{e.preventDefault();});
+  canvas.addEventListener('drop',e=>{
+    const wid=e.dataTransfer.getData('wid');
+    if(!wid)return;
+    const dragged=document.getElementById(wid);
+    if(dragged&&dragged!==el)canvas.insertBefore(dragged,el);
+  });
+  return el;
+}
+
+function addWidget(cfg, delay=0){
+  const empty = canvas.querySelector('.canvas-empty');
+  if(empty) empty.remove();
+  setTimeout(()=>{
+    const el = makeWidget(cfg);
+    canvas.appendChild(el);
+  }, delay);
+}
+
+function removeWidget(id){document.getElementById(id)?.remove();if(!canvas.children.length)showEmpty();}
+function clearCanvas(){canvas.innerHTML='';showEmpty();}
+function showEmpty(){
+  canvas.innerHTML=`<div class="canvas-empty">
+    <div class="canvas-empty-icon">⬡</div>
+    <div class="canvas-empty-title">Canvas is empty</div>
+    <div class="canvas-empty-sub">Describe your mission need to the AI and it will build the right tools for this scenario.</div>
+  </div>`;
+}
+
+/* ═══ WIDGET RENDERERS ══════════════════════════════════ */
+function renderBody(cfg){
+  switch(cfg.type){
+    case 'status': return renderStatus(cfg);
+    case 'metrics': return renderMetrics(cfg);
+    case 'workflow': return renderWorkflow(cfg);
+    case 'intel': return renderIntel(cfg);
+    case 'targets': return renderTargets(cfg);
+    case 'chart': return renderChart(cfg);
+    case 'table': return renderTable(cfg);
+    case 'map': return renderMapWidget(cfg);
+    case 'systems': return renderSystems(cfg);
+    default: return `<div style="color:var(--muted);font-size:11px">${cfg.content||'No content'}</div>`;
   }
 }
 
-/* ═══════════════════════════════════════════════
-   DRAG & DROP UNITS → MAP
-═══════════════════════════════════════════════ */
-function uDrag(e,id){
-  e.dataTransfer.setData('uid',id);
-  e.dataTransfer.effectAllowed='copy';
+function renderStatus(cfg){
+  return (cfg.items||[]).map(i=>`
+    <div class="sb-row">
+      <div class="sb-dot ${i.s||'green'}"></div>
+      <div class="sb-name">${i.name}</div>
+      <div class="sb-status">${i.detail||''}</div>
+      <div class="sb-tag ${i.s==='green'?'g':i.s==='amber'?'a':'r'}">${i.tag||''}</div>
+    </div>`).join('');
 }
 
-const mapWrap=document.getElementById('map-wrap');
-mapWrap.addEventListener('dragover',e=>{
-  e.preventDefault();
-  mapWrap.classList.add('drop-active');
-});
-mapWrap.addEventListener('dragleave',()=>mapWrap.classList.remove('drop-active'));
-mapWrap.addEventListener('drop',e=>{
-  e.preventDefault();
-  mapWrap.classList.remove('drop-active');
-  const id=e.dataTransfer.getData('uid');
-  if(!id)return;
-  const rect=mapWrap.getBoundingClientRect();
-  const px=((e.clientX-rect.left)/rect.width*100).toFixed(1);
-  const py=((e.clientY-rect.top)/rect.height*100).toFixed(1);
-  placeUnit(id,px,py);
-});
-
-function placeUnit(id,px,py){
-  const u=UNITS.find(x=>x.id===id);
-  if(!u||u.placed)return;
-  u.placed=true;
-
-  const container=document.getElementById('placed-units');
-  const el=document.createElement('div');
-  el.className='mmarker';
-  el.id='pu-'+id;
-  el.style.left=px+'%';
-  el.style.top=py+'%';
-  el.style.cursor='pointer';
-  el.onclick=()=>onFeature('funit',{u});
-  el.innerHTML=`
-    <div class="mmarker-sym">
-      <div class="sym-unit">${SYM[u.type]||SYM.inf}</div>
-    </div>
-    <div class="mmarker-lbl" style="color:#93c5fd">${u.name}</div>
-  `;
-  container.appendChild(el);
-
-  const card=document.getElementById('uc-'+id);
-  if(card){card.classList.add('placed');card.draggable=false;}
-
-  const tips={
-    aco:'A CO placed. Best suited for the AA2 infiltration — 6km to RIDGE ALPHA, est 4hr movement. Recommend assigning 172 EN for route obstacle clearance.',
-    bco:'B CO placed. Position for the AXIS BLUE feint to fix enemy BPs. Coordinate with A BTY for suppression fires before advancing past PL AMBER.',
-    cco:'C CO (Air Assault) placed. Verify LZ FALCON is within 8km. SEAD must precede by 35min — abort threshold: ADA active at DP-1.',
-    artb:'A BTY placed. Check firing fans clear of 600m NOFIRES around HADITHA. Can suppress RIDGE ALPHA BPs and conduct SEAD on ZSU-23-4 from this position.',
-    enco:'172 EN placed. Primary tasks: AA2 route clearance, PL AMBER breach, bridge recon MG 342-887. Task-organize to A CO for Phase I.',
-    isr:'ISR Plt placed. Task RQ-7B-1: continuous coverage AXIS BEAR (MDCOA trigger). RQ-7B-2: AA2 route confirmation NLT H-6. EMCON considered.',
-  };
-  thinking(()=>aiMsg(tips[id]||`${u.name} positioned. Ask me for task analysis or route guidance.`,'ai'));
+function renderMetrics(cfg){
+  return `<div class="metrics-row">${(cfg.items||[]).map(m=>`
+    <div class="metric-card">
+      <div class="metric-val" style="color:${m.color||'var(--text)'}">${m.val}</div>
+      <div class="metric-unit">${m.unit||''}</div>
+      <div class="metric-lbl">${m.lbl}</div>
+      ${m.trend?`<div class="metric-trend ${m.trend>0?'up':'dn'}">${m.trend>0?'▲':'▼'} ${Math.abs(m.trend)}%</div>`:''}
+    </div>`).join('')}</div>`;
 }
 
-/* ═══════════════════════════════════════════════
-   FEATURE CLICK → AI
-═══════════════════════════════════════════════ */
-const FEAT={
-  obj:`**OBJ EAGLE** (MG 342891)\n\nPrimary objective. Est 1 platoon defending with mutual support from RIDGE ALPHA BPs. ADA coverage makes direct air approach high-risk until suppressed.\n\nSeize sequence: RIDGE ALPHA → OBJ EAGLE simultaneously. LZ FALCON 600m north — short exposure window after SEAD.`,
-  ridge:`**RIDGE ALPHA** — Decisive Terrain\n\nDominates observation and fires across entire AO. Controls both approach axes and OBJ EAGLE. This is the most critical terrain feature in the operation.\n\nA CO must seize RIDGE ALPHA NLT H-1 to enable the simultaneous air assault. Loss of RIDGE ALPHA triggers DP-4 — request BDE reserve.`,
-  bp:`**Enemy Battle Position** — HIGH THREAT\n\nBMP-2 platoon in prepared fighting positions. Pre-planned fires cover ROUTE BLUE. Direct engagement risk to any force approaching on AA1.\n\nA BTY suppresses BPs H-30min prior. B CO feint draws fire before A CO flanks via RIDGE ALPHA. Do not advance B CO past PL AMBER without suppression confirmation.`,
-  cp:`**Enemy BN Command Post** — HVT-01\n\nHigh-value target. Destruction disrupts enemy C2 and may trigger premature withdrawal or disorganized counterattack.\n\nOptions: A BTY long-range fires (range check required), CAS via ANGLICO (SEAD first), or exploitation target post-seizure of OBJ EAGLE. Coordinate fires with BCT — target is beyond PL COPPER.`,
-  ada:`**ZSU-23-4 ADA System** — CRITICAL\n\n2× systems confirmed. Engagement envelope shown on map (2.5km radius). Aviation is non-survivable within this ring until suppressed.\n\nSEAD plan: A BTY fires HPT-02 at H-35min. Window: 15-20min of effective suppression needed. DP-1 abort threshold: ADA still active at H-3. Branch to COA 1 (ground approach only).`,
-  rblue:`**AA1 — ROUTE BLUE**\n\nMechanized avenue of approach. Good for B CO feint. Risk: canalized terrain — enemy BPs have pre-planned indirect fires on this axis.\n\nEN recon required to confirm bridge MLC-70 capacity at MG 342-887. Do not commit B CO past PL AMBER until suppression fires are confirmed on BP1 and BP2.`,
-  raa2:`**AA2 — WADIS TRAIL** (dismounted)\n\nProvides covered, concealed approach to RIDGE ALPHA. Key risk: possible enemy OP on WADIS approach.\n\nISR must confirm route clear NLT H-6. EMCON DELTA for A CO from H-6. Obstacle likely at MG 341-001 — EN Co leads with breach kit. 4hr movement plan for A CO.`,
-  plAmber:`**PL AMBER** — Phase Line\n\nGraphic control measure. Coordinates fire and maneuver — A BTY must confirm fire superiority on BPs before ground elements cross. B CO halt line pending fire confirmation. EN breach op initiates at PL AMBER after suppression.`,
-  plCopper:`**PL COPPER** — Phase Line\n\nExploitation trigger. C CO crosses PL COPPER on CDR order after OBJ EAGLE is seized. FSCMs apply — no fires beyond PL COPPER without BCT approval. BCT boundary 5km north.`,
-  staging:`**Staging Area / SP**\n\nStart point for ground movement. A CO infiltrates AA2 from this location under EMCON. B CO moves AA1. Movement timing: A CO departs SP at H-6, B CO at H-3 (deception). Logistics pre-positioned at SP — FARP co-located.`,
-  lz:(d)=>`**LZ ${d.name}**\n\nHelicopter landing zone. High-risk exposure window during approach and touchdown. ADA must be suppressed before insertion.\n\nC CO brief: abort criteria if LZ is hot (enemy contact on LZ). Alternate: LZ HAWK pre-briefed. Deception plan: initial approach to LZ HAWK, then redirect to LZ FALCON.`,
-  funit:(d)=>`**${d.u.name}** positioned on map.\n\nUnit: ${d.u.sub}. Marker is placed at your selected location.\n\nI can generate:\n• Detailed task assignment\n• Movement plan to objective\n• Logistics requirements\n• Coordination matrix\n\nWhat do you need for ${d.u.name}?`,
-  intel:(d)=>`**${d.n}** — Intelligence element.\n\nThis asset requires ISR collection to confirm. Recommend: task RQ-7B to confirm exact location NLT H-6. Add to HPT list and assign to fires annex. Click the ZSU or BP markers on the map for detailed threat assessments.`,
-  dp:(d)=>`**${d.n}** — Decision Point.\n\nThis is a critical branch trigger. Commander must monitor the associated indicator and be prepared to execute the branch plan within the decision window.\n\nAsk me to generate the full branch plan or detail the specific triggers and CDR actions for this DP.`,
-};
-
-function onFeature(key,data){
-  let r=FEAT[key];
-  if(typeof r==='function') r=r(data);
-  if(r) thinking(()=>aiMsg(r,'ai'));
+function renderWorkflow(cfg){
+  return (cfg.steps||[]).map(s=>`
+    <div class="flow-step ${s.state||''}">
+      <div class="fs-num">${s.state==='done'?'✓':s.n}</div>
+      <div class="fs-body">
+        <div class="fs-title">${s.title}${s.badge?`<span class="fs-badge ${s.badge.type}">${s.badge.label}</span>`:''}</div>
+        ${s.desc?`<div class="fs-desc">${s.desc}</div>`:''}
+        ${s.actions?`<div class="fs-actions">${s.actions.map(a=>`<button class="fs-act-btn ${a.primary?'go':''}" onclick="wfAction('${a.label}')">${a.label}</button>`).join('')}</div>`:''}
+      </div>
+    </div>`).join('');
 }
 
-/* ═══════════════════════════════════════════════
-   AI CHAT
-═══════════════════════════════════════════════ */
-const QUICK={
-  analyze:[
-    ['Enemy assessment','Give me a full enemy assessment — composition, disposition, and most dangerous COA'],
-    ['IPB summary','Summarize the Intelligence Preparation of the Battlefield for this operational area'],
-    ['Key terrain analysis','Identify and prioritize all key terrain in the AO'],
-  ],
-  plan:[
-    ['Recommend COA','Recommend the best COA for seizing OBJ EAGLE given current enemy disposition'],
-    ['Force allocation','How should I allocate the available forces across the two COAs?'],
-    ['Fires plan','Generate a preliminary fires plan covering SEAD, prep fires, and CAS coordination'],
-  ],
-  wargame:[
-    ['Run wargame','Walk me through the wargame for COA 2 phase by phase'],
-    ['Identify risks','What are the highest-risk decision points and recommended mitigations?'],
-    ['Branch plan DP-1','Generate the branch plan if DP-1 triggers — ADA not suppressed, abort air assault'],
-  ],
-  order:[
-    ['Generate OPORD','Generate the 5-paragraph OPORD for OP IRON SENTINEL'],
-    ['Annex B — Intel','Draft Annex B Intelligence for the OPORD'],
-    ['Subordinate tasks','Generate the complete task list for each subordinate unit'],
-  ],
-};
-
-function renderQuick(mode){
-  const c=document.getElementById('ai-quick');
-  c.innerHTML=(QUICK[mode]||[]).map(([l,p])=>
-    `<button class="aq-btn" onclick="sendQ('${p.replace(/'/g,"\\'")}')">→ ${l}</button>`
-  ).join('');
+function renderIntel(cfg){
+  return `<div class="intel-class s">SECRET // ${cfg.caveat||'NOFORN'}</div>` +
+    (cfg.reports||[]).map(r=>`
+    <div class="intel-entry">
+      <div class="intel-head">
+        <span class="intel-src">${r.src}</span>
+        <span class="intel-time">${r.time}</span>
+        <span class="intel-conf ${r.conf==='HIGH'?'hi':'md'}">${r.conf}</span>
+      </div>
+      <div class="intel-body">${r.body}</div>
+    </div>`).join('');
 }
 
-const RESP=[
-  {k:['enemy','assess','composition'],r:`**Enemy Assessment — 3d MRB(-)**\n\nComposition: ~600 pers, 12× BMP-2, 6× T-72B, 2× ZSU-23-4 ADA, est 4× MANPADS.\n\nDisposition: Defend in depth. BPs on RIDGE ALPHA fwd slope (confirmed). Armor reserve AXIS BEAR (estimated). ADA coverage denies aviation until suppressed.\n\nMLCOA (65%): Defend from prepared BPs, deny KARST VALLEY. MDCOA (20%): Armored counterattack along AXIS BEAR once friendly seizes RIDGE ALPHA. Address with ISR on AXIS BEAR and CAS on-call.\n\nKey vulnerability: enemy defense is oriented to AA1 — AA2 approach is unexpected.`},
-  {k:['ipb','intelligence prep','battlefield'],r:`**IPB — AO FALCON**\n\nKey terrain: RIDGE ALPHA dominates — controls observation and fires on OBJ EAGLE and both approach axes. Seizing it collapses the defense.\n\nAvenues: AA1 (mechanized, canalized, enemy-favored), AA2 (dismounted, concealed, friendly-favored).\n\nWeather: D+0–2 overcast 800ft ceiling — aviation marginal. Clears D+3.\n\nCollection gaps requiring ISR:\n1. ZSU exact position (RQ-7B task)\n2. Bridge MLC confirmation (EN recon)\n3. AA2 obstacles (ground recon NLT H-6)\n4. Armor reserve location (continuous ISR AXIS BEAR)`},
-  {k:['key terrain'],r:`**Key Terrain — Priority**\n\n1. RIDGE ALPHA — decisive. Controls the entire operation.\n2. OBJ EAGLE — primary objective. Seizing RIDGE ALPHA first collapses its defense.\n3. PL AMBER crossing sites — logistics and maneuver chokepoint.\n4. LZ FALCON — enables air assault. ADA must be suppressed first.\n\nRecommend A CO prioritizes RIDGE ALPHA above all else — do not commit C CO air assault until RIDGE ALPHA is secured or suppressed.`},
-  {k:['coa','recommend','best'],r:`**COA Recommendation: COA 2 — TURNING MOVEMENT (AI score 81/100)**\n\nRationale: Seizing RIDGE ALPHA first collapses OBJ EAGLE defense geometrically. Avoids canalized AA1 kill zone. Achieves surprise. A CO from RIDGE ALPHA + C CO air assault creates decisive cross-fire effect.\n\nKey risk: ADA suppression window is narrow (15min). Weather dependency for aviation D+0–2.\n\nBranch: if ADA active at DP-1, transition to COA 1 (B CO direct attack AA1 as main effort, no air assault).`},
-  {k:['wargame','phase'],r:`**Wargame — COA 2 Phase Summary**\n\nH-4: B CO feint fixes enemy on BPs. A CO infiltrates AA2 under EMCON. A BTY SEAD on ZSU positions (HPT-02).\n\nH-1: A CO seizes RIDGE ALPHA. Enemy reorients — armor reserve risk increases (monitor DP-2). Artillery shifts to OBJ EAGLE prep fires.\n\nH-Hour: C CO air assaults LZ FALCON. A CO attacks from RIDGE ALPHA. Defense collapses under cross-fire. B CO begins exploitation on AXIS BLUE.\n\nH+2: Consolidate OBJ EAGLE. Establish 360° defense. Expect counterattack (DP-4). B CO exploits to PL COPPER on CDR order.`},
-  {k:['opord','operation order','generate order'],r:`**OPORD 001-26 — OP IRON SENTINEL**\n\n1. SITUATION: Enemy 3d MRB(-) defends KARST VALLEY. See Annex B.\n2. MISSION: 2-14 IN BN attacks to seize OBJ EAGLE NLT D+3 to deny enemy KARST VALLEY corridor.\n3. EXECUTION: COA 2. B CO feint AA1. A CO infiltrate AA2, seize RIDGE ALPHA H-1. C CO air assault LZ FALCON H-Hour. H-Hour: 0400L D+0.\n4. SUSTAINMENT: BSB sustains 96hr. FARP MG 337-883. CASEVAC priority CAT A/B.\n5. C&S: BN CDR with B CO (TAC). PACE: SINCGARS/EPLRS/SATCOM/visual.\n\nFull OPORD with annexes available on request.`},
-  {k:['risk','danger','threat'],r:`**Risk Assessment**\n\nExtreme (pre-control):\n🔴 ADA threat to air assault → SEAD required, 15min window → residual HIGH\n🔴 Enemy armor counterattack → ISR + CAS + BDE reserve → residual MODERATE\n\nHigh:\n🟡 Logistics split (FARP) → FARP plan + 96hr pre-positioned → residual LOW\n🟡 Weather/aviation → Branch to COA 1 → residual MODERATE\n🟡 Bridge MLC → EN recon NLT D-2 → residual LOW\n\nOverall residual: MODERATE. CDR acceptance required.`},
-  {k:['fire','fires','artillery','sead'],r:`**Preliminary Fires Plan**\n\nSEAD: A BTY → ZSU-23-4 (HPT-02) H-35min. Critical for aviation — 15min suppression window.\nPrep: A BTY → OBJ EAGLE BPs H-15min to H-Hour. Suppress RIDGE ALPHA fwd slope H-30min.\nCAS: ANGLICO coordinates — on-call for DP-2 (armor on AXIS BEAR) and DP-4 (counterattack).\nNOFIRES: 600m HADITHA village, medical facility MG 341-889, water treatment plant MG 343-891.\nFSCL: PL COPPER — no fires beyond without BCT approval.`},
-  {k:['force','allocat','assign'],r:`**Force Allocation — COA 2**\n\nA CO (main effort P1) → infiltrate AA2 → seize RIDGE ALPHA NLT H-1\nB CO (shaping) → feint/limited attack AXIS BLUE → fix enemy BPs\nC CO (main effort P2) → air assault LZ FALCON → seize OBJ EAGLE H-Hour\nA BTY → SEAD + PREP + on-call CAS deconfliction\n172 EN → task-org to A CO for AA2 obstacle clearance\nISR Plt → RQ-7B-1 on AXIS BEAR (MDCOA), RQ-7B-2 clears AA2 NLT H-6\n\nBDE reserve: 1-12 IN BN, uncommitted — activate on DP-4.`},
+function renderTargets(cfg){
+  return `<table class="dt"><thead><tr><th>TGT ID</th><th>Description</th><th>Prio</th><th>Status</th></tr></thead><tbody>` +
+    (cfg.targets||[]).map(t=>`<tr>
+      <td class="tgt-id">${t.id}</td>
+      <td style="font-size:11px">${t.name}</td>
+      <td><div class="tgt-prio" style="color:${['#ef4444','#f59e0b','#10b981'][t.prio-1]||'#94a3b8'}">${t.prio}</div></td>
+      <td><span class="sb-tag ${t.status==='ACTIVE'?'r':t.status==='ENGAGED'?'a':'g'}">${t.status}</span></td>
+    </tr>`).join('') + '</tbody></table>';
+}
+
+function renderChart(cfg){
+  const max = Math.max(...(cfg.bars||[]).map(b=>b.val));
+  return `<div class="bar-chart">${(cfg.bars||[]).map(b=>`
+    <div class="bar-row">
+      <div class="bar-lbl">${b.lbl}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(b.val/max*100).toFixed(0)}%;background:${b.color||'var(--green)'}"></div></div>
+      <div class="bar-val">${b.val}${b.unit||''}</div>
+    </div>`).join('')}</div>`;
+}
+
+function renderTable(cfg){
+  return `<table class="dt"><thead><tr>${(cfg.cols||[]).map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>` +
+    (cfg.rows||[]).map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('') + '</tbody></table>';
+}
+
+function renderMapWidget(cfg){
+  return `<svg class="map-widget-svg" viewBox="0 0 400 280" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="vg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1710"/><stop offset="1" stop-color="#111d14"/></linearGradient>
+      <pattern id="mg" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M40 0L0 0 0 40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/>
+      </pattern>
+    </defs>
+    <rect width="400" height="280" fill="url(#vg)"/>
+    <rect width="400" height="280" fill="url(#mg)"/>
+    <!-- West ridge -->
+    <path d="M0,0 L0,280 L130,280 C110,200 100,130 115,70 L100,0Z" fill="#0a1408" opacity="0.9"/>
+    <!-- East ridge -->
+    <path d="M400,0 L250,0 C265,60 275,130 270,200 L280,280 L400,280Z" fill="#0a1408" opacity="0.9"/>
+    <!-- Valley floor -->
+    <path d="M150,280 C160,220 165,160 170,110 C175,60 185,30 210,10 C220,5 230,2 245,0" stroke="#1a3520" stroke-width="60" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <!-- River -->
+    <path d="M165,280 C168,230 170,180 172,130 C174,90 178,55 185,20" stroke="#1e3a5a" stroke-width="3" fill="none" opacity="0.8"/>
+    <!-- Routes -->
+    <polyline points="140,280 158,230 168,180 178,130 200,90 230,60 250,30" stroke="#3b82f6" stroke-width="2" fill="none" opacity="0.7"/>
+    <polyline points="140,280 145,240 148,200 152,155 160,120" stroke="#10b981" stroke-width="1.5" fill="none" stroke-dasharray="6 4" opacity="0.65"/>
+    <!-- Phase lines -->
+    <line x1="0" y1="220" x2="400" y2="220" stroke="#f59e0b" stroke-width="1" stroke-dasharray="8 5" opacity="0.6"/>
+    <text x="5" y="216" fill="#f59e0b" font-size="8" font-weight="700" opacity="0.8">PL AMBER</text>
+    <line x1="0" y1="55" x2="400" y2="55" stroke="#10b981" stroke-width="1" stroke-dasharray="8 5" opacity="0.6"/>
+    <text x="5" y="51" fill="#10b981" font-size="8" font-weight="700" opacity="0.8">PL COPPER</text>
+    <!-- OBJ -->
+    <rect x="237" y="40" width="16" height="16" fill="rgba(239,68,68,.2)" stroke="#ef4444" stroke-width="2" transform="rotate(45 245 48)"/>
+    <text x="258" y="48" fill="#ef4444" font-size="8" font-weight="800">OBJ EAGLE</text>
+    <!-- Ridge Alpha -->
+    <polygon points="160,110 152,126 168,126" fill="#10b981" opacity="0.9"/>
+    <text x="172" y="124" fill="#10b981" font-size="7">RIDGE α</text>
+    <!-- Enemy BPs -->
+    <rect x="208" y="92" width="14" height="14" fill="#ef4444" rx="1"/>
+    <text x="211" y="103" fill="#fff" font-size="7" font-weight="800">BP</text>
+    <rect x="232" y="68" width="14" height="14" fill="#ef4444" rx="1"/>
+    <text x="235" y="79" fill="#fff" font-size="7" font-weight="800">BP</text>
+    <!-- ADA ring -->
+    <circle cx="222" cy="98" r="35" fill="rgba(239,68,68,.05)" stroke="#ef4444" stroke-width="1" stroke-dasharray="5 4" opacity="0.5"/>
+    <!-- Staging -->
+    <circle cx="142" cy="268" r="7" fill="#1d4ed8" opacity="0.9"/>
+    <text x="152" y="271" fill="#93c5fd" font-size="8">SP</text>
+    <!-- Expand hint -->
+    <text x="350" y="275" fill="rgba(255,255,255,0.2)" font-size="8">tap to expand</text>
+  </svg>`;
+}
+
+function renderSystems(cfg){
+  return (cfg.connections||[]).map(c=>`
+    <div class="conn-row">
+      <div class="conn-ico">${c.ico}</div>
+      <div class="conn-info">
+        <div class="conn-name">${c.name}</div>
+        <div class="conn-cap">${c.caps}</div>
+      </div>
+      <span class="conn-status" style="background:${c.online?'rgba(16,185,129,.15)':'rgba(239,68,68,.1)'};color:${c.online?'var(--green)':'var(--red)'};border:1px solid ${c.online?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)'}">${c.online?'ONLINE':'OFFLINE'}</span>
+    </div>`).join('');
+}
+
+function wfAction(label){aiMsg(`Executing: ${label}…`,'sys');}
+function exportLayout(){aiMsg('Layout exported to mission folder. OPORD annex generated.','sys');}
+function promptFocus(){document.getElementById('ai-inp').focus();}
+function addSystem(){aiMsg('Opening System Integration Wizard. Describe the system you want to connect or select from the registry.','ai');}
+function sysClick(id){
+  const names={bft:'Blue Force Tracker',cpof:'CPOF/ATAK',dcgs:'DCGS-A Intelligence',metoc:'METOC Weather',afatds:'AFATDS Fire Support',gcss:'GCSS-A Logistics',amps:'AMPS Aviation',wint:'WIN-T Communications'};
+  thinking(()=>aiMsg(`**${names[id]||id}** capabilities available:\n\nClick "Add to Canvas" to create a widget, or describe what you need from this system and I'll build the right view.`,'ai'));
+}
+
+/* ═══ SCENARIOS ════════════════════════════════════════ */
+const SCENARIOS = [
+  {label:'Air Defense & SEAD', key:'ada'},
+  {label:'Logistics & Sustainment', key:'log'},
+  {label:'Intelligence Fusion', key:'intel'},
+  {label:'Mission Command Overview', key:'cmd'},
+  {label:'Fires Coordination', key:'fires'},
+  {label:'Aviation Planning', key:'avn'},
 ];
 
-function matchAI(t){
-  const tl=t.toLowerCase();
-  for(const r of RESP) if(r.k.some(k=>tl.includes(k))) return r.r;
-  return `Analyzing in context of OP IRON SENTINEL...\n\nCurrent situation: COA 2 (Turning Movement) is the recommended COA — RIDGE ALPHA is decisive terrain. ADA suppression and SEAD timing are the critical planning factors.\n\nSwitch modes at the top to access planning tools, or click any element on the map for detailed analysis. What specifically do you need?`;
+const SCENARIO_WIDGETS = {
+  ada: {
+    name:'Air Defense Suppression Coordination',
+    widgets:[
+      {type:'metrics',title:'ADA Threat Status',items:[
+        {val:'2',lbl:'ZSU-23-4 Confirmed',color:'#ef4444'},
+        {val:'4',lbl:'MANPADS Estimated',color:'#f59e0b'},
+        {val:'35',unit:'min',lbl:'SEAD Window',color:'#10b981'},
+        {val:'92',unit:'%',lbl:'Suppression Conf.',color:'#10b981'},
+      ],span:'3',actions:[{label:'Refresh',fn:'sysClick("dcgs")'}]},
+      {type:'status',title:'ADA Systems Tracked',items:[
+        {name:'ZSU-23-4 #1',detail:'MG 344-893',s:'red',tag:'ACTIVE'},
+        {name:'ZSU-23-4 #2',detail:'MG 347-891',s:'amber',tag:'PROBABLE'},
+        {name:'MANPADS Plt',detail:'AXIS BEAR',s:'amber',tag:'UNCONF'},
+        {name:'SA-7 (est)',detail:'East ridge',s:'amber',tag:'ESTIMATED'},
+        {name:'Radar node',detail:'MG 345-889',s:'red',tag:'ACTIVE'},
+      ]},
+      {type:'workflow',title:'SEAD Execution Workflow',span:'2',steps:[
+        {n:1,state:'done',title:'ISR confirms ZSU position',desc:'RQ-7B confirms both ZSU-23-4 locations. MG 344-893 and 347-891.',badge:{type:'done',label:'CONFIRMED'}},
+        {n:2,state:'active',title:'A BTY SEAD fires H-35min',desc:'6× M109A7 fire 4 volleys on HPT-02. Effectiveness assessment in progress.',badge:{type:'act',label:'IN PROGRESS'},
+          actions:[{label:'View Fire Mission',primary:false},{label:'Confirm BDA',primary:true}]},
+        {n:3,state:'',title:'DP-1: ADA Status Check',desc:'If ADA still active 30min after SEAD — branch to COA 1 (no air assault).'},
+        {n:4,state:'',title:'C CO Air Assault launch',desc:'C CO launches from SP on CDR confirmation of SEAD effectiveness.'},
+      ]},
+      {type:'intel',title:'ADA Intelligence Summary',reports:[
+        {src:'SIGINT',time:'091630Z',conf:'HIGH',body:'ZSU-23-4 radar emissions confirmed on freq 3.4GHz vic MG 344-893. Active search mode — threat posture ELEVATED.'},
+        {src:'IMINT',time:'091515Z',conf:'MEDIUM',body:'Imagery shows 2 vehicles consistent with ZSU-23-4 in defilade position RIDGE ALPHA fwd slope. Crew activity visible.'},
+      ]},
+      {type:'chart',title:'Airspace Risk by Route',bars:[
+        {lbl:'AXIS BLUE',val:85,color:'#ef4444',unit:'%'},
+        {lbl:'LZ FALCON',val:72,color:'#ef4444',unit:'%'},
+        {lbl:'LZ HAWK',val:48,color:'#f59e0b',unit:'%'},
+        {lbl:'AA2 (dismtd)',val:12,color:'#10b981',unit:'%'},
+      ]},
+    ]
+  },
+  log: {
+    name:'Logistics & Sustainment Dashboard',
+    widgets:[
+      {type:'metrics',title:'Supply Status — Class Summary',span:'3',items:[
+        {val:'78',unit:'%',lbl:'Class I (Rations)',color:'#f59e0b',trend:-4},
+        {val:'62',unit:'%',lbl:'Class III (Fuel)',color:'#ef4444',trend:-12},
+        {val:'91',unit:'%',lbl:'Class V (Ammo)',color:'#10b981',trend:0},
+        {val:'85',unit:'%',lbl:'Class IX (Parts)',color:'#10b981',trend:2},
+      ]},
+      {type:'status',title:'CASEVAC Status',items:[
+        {name:'MEDEVAC 1-1',detail:'Available, Grid MG 337-883',s:'green',tag:'READY'},
+        {name:'MEDEVAC 1-2',detail:'On mission — ETE 22min',s:'amber',tag:'ENGAGED'},
+        {name:'Ground CASEVAC',detail:'2× M997, AA2 route',s:'green',tag:'STAGED'},
+        {name:'BAS Location',detail:'MG 332-884, operational',s:'green',tag:'ONLINE'},
+        {name:'Role 2 (FARP)',detail:'MG 337-883, medical aug',s:'amber',tag:'PARTIAL'},
+      ]},
+      {type:'workflow',title:'LOGPAC Execution',span:'2',steps:[
+        {n:1,state:'done',title:'Pre-combat checks complete',desc:'All vehicles loadplanned. Class I, III, V loaded IAW LOGPAC order.',badge:{type:'done',label:'DONE'}},
+        {n:2,state:'done',title:'Movement to FARP',desc:'BSB convoy departed SP MG 337-883 at 091500Z. En route.',badge:{type:'done',label:'MOVING'}},
+        {n:3,state:'active',title:'FARP established',desc:'Aviation FARP ops active. Class III(A) available for C CO. Await SP confirmation.',badge:{type:'act',label:'ACTIVE'},
+          actions:[{label:'FARP Status',primary:false},{label:'Confirm Ops',primary:true}]},
+        {n:4,state:'',title:'LOGPAC push to forward units',desc:'A CO receives LOGPAC via LZ FALCON post-seizure. B/C CO via AXIS BLUE.'},
+      ]},
+      {type:'table',title:'Supply Request Queue',cols:['Unit','Class','Qty','Priority','Status'],rows:[
+        ['A CO','V (7.62mm)','30K rds','URGENT','Submitted'],
+        ['C CO','III(A) Fuel','800 gal','ROUTINE','Approved'],
+        ['A BTY','V (155mm)','240 rds','URGENT','In transit'],
+        ['172 EN','IX (track)','2 sets','ROUTINE','Pending'],
+      ]},
+    ]
+  },
+  intel: {
+    name:'Intelligence Fusion Dashboard',
+    widgets:[
+      {type:'metrics',title:'Collection Status',span:'3',items:[
+        {val:'6',lbl:'Active ISR Assets',color:'#10b981'},
+        {val:'3',lbl:'Open PIRs',color:'#f59e0b'},
+        {val:'87',unit:'%',lbl:'Target Confidence',color:'#10b981'},
+        {val:'2',lbl:'Intel Gaps',color:'#ef4444'},
+      ]},
+      {type:'intel',title:'Current Intelligence Reporting',span:'2',reports:[
+        {src:'SIGINT',time:'091730Z',conf:'HIGH',body:'COMINT intercepts confirm enemy BN CDR communications at MG 346-893. C2 node active, 3-5 personnel. Recommend targeting priority HPT-01.'},
+        {src:'HUMINT',time:'091600Z',conf:'MEDIUM',body:'Local source IRONWOOD reports armor movement via AXIS BEAR approx 091430Z. 2-4 vehicles, T-72 type, direction NW. Corroborates MDCOA.'},
+        {src:'IMINT',time:'091515Z',conf:'HIGH',body:'RQ-7B imagery confirms 2× ZSU-23-4 positions RIDGE ALPHA fwd slope. Position data sent to AFATDS for targeting.'},
+      ]},
+      {type:'targets',title:'High Payoff Target List',targets:[
+        {id:'HPT-01',name:'Enemy BN CP — MG 346-893',prio:1,status:'ACTIVE'},
+        {id:'HPT-02',name:'ZSU-23-4 ×2 — RIDGE ALPHA',prio:1,status:'ENGAGED'},
+        {id:'HPT-03',name:'BMP-2 Plt — RIDGE ALPHA reverse',prio:2,status:'ACTIVE'},
+        {id:'HPT-04',name:'EW/Jamming Node — MG 347-890',prio:2,status:'ACTIVE'},
+        {id:'HPT-05',name:'Armor Reserve — AXIS BEAR',prio:1,status:'ACTIVE'},
+      ]},
+      {type:'chart',title:'Enemy Strength Estimate by Location',bars:[
+        {lbl:'RIDGE ALPHA',val:180,color:'#ef4444',unit:' pers'},
+        {lbl:'OBJ EAGLE',val:80,color:'#ef4444',unit:' pers'},
+        {lbl:'AXIS BEAR',val:120,color:'#f59e0b',unit:' pers'},
+        {lbl:'EN CP',val:40,color:'#f59e0b',unit:' pers'},
+        {lbl:'Reserve (est)',val:200,color:'#f59e0b',unit:' pers'},
+      ]},
+    ]
+  },
+  cmd: {
+    name:'Mission Command — Operational Overview',
+    widgets:[
+      {type:'metrics',title:'Operational Status',span:'3',items:[
+        {val:'D+2',lbl:'Current Phase',color:'#ef4444'},
+        {val:'87',unit:'%',lbl:'Force Readiness',color:'#10b981',trend:-3},
+        {val:'3',lbl:'Open CCIRs',color:'#f59e0b'},
+        {val:'72',unit:'hr',lbl:'Supply Endurance',color:'#10b981'},
+        {val:'4',lbl:'Decision Points',color:'#94a3b8'},
+      ]},
+      {type:'map',title:'Operational Overlay — AO FALCON',span:'2'},
+      {type:'status',title:'Unit Status Board',items:[
+        {name:'A CO — 2-14 IN',detail:'RIDGE ALPHA — SECURE',s:'green',tag:'READY'},
+        {name:'B CO — 2-14 IN',detail:'AXIS BLUE — ADVANCING',s:'green',tag:'MOVING'},
+        {name:'C CO — 2-14 IN',detail:'OBJ EAGLE — SEIZING',s:'amber',tag:'TIC'},
+        {name:'A BTY 2-17 FA',detail:'PP IRON — FIRING',s:'green',tag:'FIRING'},
+        {name:'172 EN CO(-)',detail:'AA2 — Route cleared',s:'green',tag:'COMPLETE'},
+        {name:'ISR Plt',detail:'AXIS BEAR coverage',s:'green',tag:'ONLINE'},
+      ]},
+      {type:'workflow',title:'Current Decision: DP-2 (Armor)',span:'2',steps:[
+        {n:1,state:'done',title:'ISR detects armor movement AXIS BEAR',badge:{type:'done',label:'TRIGGERED'}},
+        {n:2,state:'active',title:'CAS request transmitted to ANGLICO',desc:'A-10 flight RAZORBACK 21 inbound — ETE 8min.',badge:{type:'act',label:'IN PROGRESS'},
+          actions:[{label:'CAS Status',primary:false},{label:'Confirm Tgt',primary:true}]},
+        {n:3,state:'',title:'B CO shifts to screen position',desc:'B CO moves to blocking position vic MG 340-880.'},
+        {n:4,state:'',title:'BDE reserve activation (if required)',desc:'DP-4 trigger — 1-12 IN BN commitment requires BCT CDR approval.'},
+      ]},
+    ]
+  },
+  fires: {
+    name:'Fires Coordination Dashboard',
+    widgets:[
+      {type:'metrics',title:'Fires Status',span:'3',items:[
+        {val:'6',lbl:'Howitzers Available',color:'#10b981'},
+        {val:'240',unit:'rds',lbl:'155mm Ready',color:'#10b981'},
+        {val:'2',lbl:'Missions Active',color:'#ef4444'},
+        {val:'94',unit:'%',lbl:'Mission Success Rate',color:'#10b981'},
+      ]},
+      {type:'targets',title:'Active Target List — AFATDS',targets:[
+        {id:'AD0341',name:'ZSU-23-4 #1 — MG 344-893',prio:1,status:'ENGAGED'},
+        {id:'AD0342',name:'ZSU-23-4 #2 — MG 347-891',prio:1,status:'ACTIVE'},
+        {id:'BI0421',name:'Enemy BN CP — MG 346-893',prio:1,status:'ACTIVE'},
+        {id:'AR0182',name:'BMP-2 Plt — RIDGE ALPHA',prio:2,status:'ACTIVE'},
+        {id:'AR0183',name:'Armor Reserve — AXIS BEAR',prio:1,status:'ACTIVE'},
+      ]},
+      {type:'workflow',title:'Fire Mission — HPT-02 SEAD',span:'2',steps:[
+        {n:1,state:'done',title:'Fire mission request submitted',desc:'Grid: MG 344-893. Method: Area suppression. Effect: Suppress ZSU.',badge:{type:'done',label:'APPROVED'}},
+        {n:2,state:'done',title:'Howitzers laid and loaded',desc:'A BTY 6× M109A7 ready. 4 volleys planned. H-35min.',badge:{type:'done',label:'READY'}},
+        {n:3,state:'active',title:'Fire for effect — SEAD',desc:'Firing in progress. Volley 2 of 4 complete. BDA pending.',badge:{type:'act',label:'FIRING'},
+          actions:[{label:'BDA Report',primary:false},{label:'Cease Fire',primary:false}]},
+        {n:4,state:'',title:'BDA Assessment',desc:'ISR conducts post-strike assessment. Go/No-Go for C CO air assault.'},
+      ]},
+      {type:'table',title:'NOFIRES Areas',cols:['Name','Grid','Radius','Auth'],rows:[
+        ['HADITHA Village','MG 340-890','600m','BCT CDR'],
+        ['Medical Facility','MG 341-889','200m','BCT CDR'],
+        ['Water Treatment','MG 343-891','300m','BCT CDR'],
+        ['LZ HAWK','MG 338-881','150m','BN CDR'],
+      ]},
+    ]
+  },
+  avn: {
+    name:'Aviation Planning & Airspace',
+    widgets:[
+      {type:'metrics',title:'Aviation Status',span:'3',items:[
+        {val:'4',lbl:'UH-60 Available',color:'#10b981'},
+        {val:'2',lbl:'AH-64 CAS Ready',color:'#10b981'},
+        {val:'2',lbl:'RQ-7B Airborne',color:'#3b82f6'},
+        {val:'AMBER',lbl:'Airspace Condition',color:'#f59e0b'},
+      ]},
+      {type:'status',title:'Aircraft Status',items:[
+        {name:'UH-60 BLADE 11',detail:'LZ FALCON — ON STATION',s:'green',tag:'READY'},
+        {name:'UH-60 BLADE 12',detail:'FARP — Refueling',s:'amber',tag:'REFUEL'},
+        {name:'UH-60 BLADE 21',detail:'C CO insert — RTB',s:'amber',tag:'RTFARP'},
+        {name:'AH-64 APACHE 31',detail:'CAS station — AXIS BEAR',s:'green',tag:'ON STA'},
+        {name:'RQ-7B SHADOW 1',detail:'AXIS BEAR coverage',s:'green',tag:'AIRBORNE'},
+        {name:'RQ-7B SHADOW 2',detail:'AA2 route — tasked',s:'green',tag:'AIRBORNE'},
+      ]},
+      {type:'workflow',title:'Air Assault Execution',span:'2',steps:[
+        {n:1,state:'done',title:'SEAD confirmation — ADA suppressed',badge:{type:'done',label:'CLEARED'}},
+        {n:2,state:'done',title:'C CO loads aircraft at FARP',desc:'105 personnel, full combat load. 3× UH-60.',badge:{type:'done',label:'LOADED'}},
+        {n:3,state:'active',title:'Deception flight to LZ HAWK',desc:'BLADE flight 11/12 en route LZ HAWK for deception landing. ETE 4min.',badge:{type:'act',label:'AIRBORNE'},
+          actions:[{label:'Track Flight',primary:false},{label:'Redirect FALCON',primary:true}]},
+        {n:4,state:'',title:'Assault into LZ FALCON',desc:'Redirect to LZ FALCON on CDR approval. LZ FALCON clear confirmation required.'},
+      ]},
+    ]
+  },
+};
+
+function loadScenario(key){
+  const sc = SCENARIO_WIDGETS[key];
+  if(!sc) return;
+  clearCanvas();
+  document.getElementById('ct-scenario').textContent = sc.name;
+  const genMsg = `Building **${sc.name}** dashboard…\n\nGenerating ${sc.widgets.length} widgets:`;
+  const preview = sc.widgets.map(w=>`<div class="gen-preview-row">${w.title} (${w.type})</div>`).join('');
+  aiMsg(genMsg+'<div class="gen-preview">'+preview+'</div>','gen');
+  sc.widgets.forEach((w,i)=>addWidget(w, i*120+300));
+  setTimeout(()=>aiMsg(`Dashboard ready. All ${sc.widgets.length} panels are live-connected to their respective systems. Click any element for AI analysis, or ask me to modify, add, or link widgets.`,'ai'),sc.widgets.length*120+600);
 }
 
-let thinking_timer;
+/* ═══ AI CHAT ══════════════════════════════════════════ */
+const RESPONSES = [
+  {k:['ada','air defense','sead','zsu'],sc:'ada'},
+  {k:['log','supply','sustainment','casevac','class'],sc:'log'},
+  {k:['intel','intelligence','target','ipb','hpt'],sc:'intel'},
+  {k:['command','overview','status','dashboard','overview'],sc:'cmd'},
+  {k:['fire','fires','artillery','afatds'],sc:'fires'},
+  {k:['avi','air assault','helicopter','rotary'],sc:'avn'},
+];
+
+const TEXT_RESPONSES = [
+  {k:['connect','add system','integrate'],r:`To connect a new system, describe it or select from the registry on the left. I can create a custom API connector for any system that provides:\n• REST or SOAP endpoints\n• Message queue feeds (MQ, MQTT)\n• File-based data exchange\n• Direct database access\n\nWhat system do you want to add?`},
+  {k:['workflow','process','checklist','decision'],r:`I can generate a decision workflow for any process. Describe the scenario — I'll create the steps, decision points, and trigger conditions. Example: "Create a CASEVAC decision workflow" or "Build a CCIR reporting process".`},
+  {k:['clear','remove','delete','start over'],fn:()=>{clearCanvas();return'Canvas cleared. Describe your new mission scenario and I\'ll build the right set of tools.';}},
+  {k:['export','save','download'],r:`Layout exported. Generated products:\n• Mission dashboard (PDF)\n• Data snapshot (JSON)\n• Widget configuration (shareable link)\n• OPORD Annex (formatted)`},
+  {k:['help','what can','capabilities'],r:`I can help you:\n\n• **Build custom dashboards** — describe your mission and I create the right panels\n• **Connect systems** — integrate any C2 system, sensor, or data source\n• **Generate workflows** — decision trees, checklists, and process flows\n• **Analyze data** — click any widget element for AI analysis\n• **Create UI dynamically** — any tool you need, for any mission type\n\nStart with a mission scenario or ask for a specific capability.`},
+];
+
+function matchResp(text){
+  const t = text.toLowerCase();
+  // Check if it's a scenario request
+  for(const r of RESPONSES){
+    if(r.k.some(k=>t.includes(k))){
+      setTimeout(()=>loadScenario(r.sc),800);
+      const sc=SCENARIO_WIDGETS[r.sc];
+      return `Building **${sc?.name||r.sc}** dashboard for you. I'm generating ${sc?.widgets?.length||4} specialized widgets connected to the relevant systems.\n\nI'll customize this further based on your specific needs — just ask.`;
+    }
+  }
+  // Text responses
+  for(const r of TEXT_RESPONSES){
+    if(r.k.some(k=>t.includes(k))){
+      if(r.fn) return r.fn();
+      return r.r;
+    }
+  }
+  // Generic - but try to generate something useful
+  if(t.length > 10){
+    // Attempt to parse a custom scenario
+    setTimeout(()=>{
+      addWidget({
+        type:'workflow',title:`AI Generated: ${text.slice(0,40)}…`,span:'2',
+        steps:[
+          {n:1,state:'active',title:'Requirement analysis',desc:'AI parsing mission requirement and identifying required capabilities.',badge:{type:'act',label:'PROCESSING'}},
+          {n:2,state:'',title:'System identification',desc:'Matching requirement to available connected systems.'},
+          {n:3,state:'',title:'UI generation',desc:'Building custom panels and data connectors.'},
+          {n:4,state:'',title:'Validation',desc:'Confirm with operator that generated layout meets needs.'},
+        ]
+      },400);
+    },1200);
+    return `Analyzing your request: "${text}"\n\nI've created an initial workflow scaffold. To refine this:\n• Tell me which systems to connect\n• Specify what data you need displayed\n• Describe the decision points you need supported\n\nThe more context you give me, the more precisely I can build the right tools.`;
+  }
+  return `I'm ready to build UI for any mission scenario. Try:\n\n• "Build a dashboard for air defense coordination"\n• "Create a logistics status view"\n• "Show me an intelligence fusion dashboard"\n• "I need to coordinate a medevac operation"\n\nOr describe any mission challenge and I'll create the right tools.`;
+}
+
+let thinkTimer;
 function thinking(cb){
   document.getElementById('ai-send-btn').disabled=true;
   const msgs=document.getElementById('ai-msgs');
   const el=document.createElement('div');
   el.className='athinking';
   el.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';
-  msgs.appendChild(el);
-  msgs.scrollTop=msgs.scrollHeight;
-  thinking_timer=setTimeout(()=>{
-    el.remove();
-    document.getElementById('ai-send-btn').disabled=false;
-    cb();
-  },800+Math.random()*600);
+  msgs.appendChild(el);msgs.scrollTop=msgs.scrollHeight;
+  thinkTimer=setTimeout(()=>{el.remove();document.getElementById('ai-send-btn').disabled=false;cb();},900+Math.random()*500);
 }
 
-function aiMsg(txt,role){
+function aiMsg(txt,role='ai'){
   const msgs=document.getElementById('ai-msgs');
   const n=new Date(),p=v=>String(v).padStart(2,'0');
   const ts=`${p(n.getUTCHours())}${p(n.getUTCMinutes())}Z`;
   const el=document.createElement('div');
-  el.innerHTML=`<div class="amsg-role">${role==='user'?'Planner':role==='ctx'?'System':'AI'} · ${ts}</div>
-    <div class="abubble ${role==='user'?'user':role==='ctx'?'ctx':'ai'}">${
-      txt.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-    }</div>`;
-  msgs.appendChild(el);
-  msgs.scrollTop=msgs.scrollHeight;
+  const roleLabel={ai:'AI',user:'Planner',sys:'System',gen:'AI — Generating'}[role]||role;
+  el.innerHTML=`<div class="amsg-role">${roleLabel} · ${ts}</div>
+    <div class="abubble ${role}">${txt.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;
+  msgs.appendChild(el);msgs.scrollTop=msgs.scrollHeight;
 }
 
-function sendQ(p){aiMsg(p,'user');thinking(()=>aiMsg(matchAI(p),'ai'));}
 function sendMsg(){
-  const i=document.getElementById('ai-inp');
-  const t=i.value.trim();
-  if(!t)return;
-  aiMsg(t,'user');
-  i.value='';
-  thinking(()=>aiMsg(matchAI(t),'ai'));
+  const inp=document.getElementById('ai-inp');
+  const text=inp.value.trim();if(!text)return;
+  aiMsg(text,'user');inp.value='';
+  thinking(()=>aiMsg(matchResp(text),'ai'));
 }
 function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
 
-/* ═══════════════════════════════════════════════
-   TIMELINE
-═══════════════════════════════════════════════ */
+/* ═══ SCENARIO BUTTONS ══════════════════════════════════ */
+function renderScenarioBtns(){
+  const c=document.getElementById('ai-scenarios');
+  c.innerHTML='<div class="ai-sc-lbl">Build for Scenario</div>'+
+    SCENARIOS.map(s=>`<button class="sc-btn" onclick="aiMsg('${s.label}','user');thinking(()=>{ loadScenario('${s.key}'); aiMsg('Building ${s.label} dashboard…','ai') })">→ ${s.label}</button>`).join('');
+}
+renderScenarioBtns();
+
+/* ═══ TIMELINE ══════════════════════════════════════════ */
 const DAYS=['D-3','D-2','D-1','D+0','D+1','D+2','D+3','D+4','D+5'];
 const PHASES=[
-  {label:'PLANNING', color:'#6366f1',dayStart:0,daySpan:2},
-  {label:'MOVEMENT', color:'#10b981',dayStart:2,daySpan:2},
-  {label:'ACTION',   color:'#ef4444',dayStart:4,daySpan:3},
-  {label:'CONSOL.',  color:'#f59e0b',dayStart:7,daySpan:2},
+  {label:'PLANNING',color:'#6366f1',start:0,span:2},
+  {label:'MOVEMENT',color:'#10b981',start:2,span:2},
+  {label:'ACTION',  color:'#ef4444',start:4,span:3},
+  {label:'CONSOL.', color:'#f59e0b',start:7,span:2},
 ];
-const DAY_W=120;
+const DW=120;
 
 function buildTimeline(){
   const inner=document.getElementById('tl-inner');
-  inner.style.width=(DAYS.length*DAY_W)+'px';
-  inner.innerHTML=DAYS.map(d=>`
-    <div class="tl-day" style="width:${DAY_W}px">
-      <div class="tl-day-lbl">${d}</div>
-    </div>`).join('');
-
+  inner.style.width=(DAYS.length*DW)+'px';
+  inner.innerHTML=DAYS.map(d=>`<div class="tl-day" style="width:${DW}px"><div class="tl-day-lbl">${d}</div></div>`).join('');
   PHASES.forEach(p=>{
     const el=document.createElement('div');
     el.className='phase-blk';
-    el.style.cssText=`left:${p.dayStart*DAY_W+4}px;width:${p.daySpan*DAY_W-8}px;background:${p.color};color:${['#10b981','#6366f1'].includes(p.color)?'#fff':'#000'}`;
+    el.style.cssText=`left:${p.start*DW+4}px;width:${p.span*DW-8}px;background:${p.color};color:${['#10b981','#6366f1'].includes(p.color)?'#fff':'#000'}`;
     el.draggable=true;
-    el.innerHTML=`${p.label}<div class="ph-resize"></div>`;
-
-    el.addEventListener('dragstart',e=>{
-      e.dataTransfer.setData('phase',p.label);
-      e.dataTransfer.effectAllowed='move';
-    });
-
-    // Resize handle
-    const rh=el.querySelector('.ph-resize');
-    let resizing=false,startX=0,startW=0;
-    rh.addEventListener('mousedown',e=>{
-      resizing=true;startX=e.clientX;startW=el.offsetWidth;
-      e.stopPropagation();e.preventDefault();
-    });
-    document.addEventListener('mousemove',e=>{
-      if(!resizing)return;
-      const delta=e.clientX-startX;
-      const newW=Math.max(60,startW+delta);
-      el.style.width=newW+'px';
-    });
-    document.addEventListener('mouseup',()=>{resizing=false;});
+    el.innerHTML=p.label+'<div class="ph-rsz"></div>';
+    el.addEventListener('dragstart',e=>{e.dataTransfer.setData('phase',p.label);e.dataTransfer.effectAllowed='move';});
+    // resize
+    const rh=el.querySelector('.ph-rsz');
+    let rs=false,sx=0,sw=0;
+    rh.addEventListener('mousedown',e=>{rs=true;sx=e.clientX;sw=el.offsetWidth;e.stopPropagation();e.preventDefault();});
+    document.addEventListener('mousemove',e=>{if(!rs)return;el.style.width=Math.max(60,sw+(e.clientX-sx))+'px';});
+    document.addEventListener('mouseup',()=>{rs=false;});
     inner.appendChild(el);
   });
-
-  // Drop to reposition phase blocks
-  inner.addEventListener('dragover',e=>{e.preventDefault();});
+  inner.addEventListener('dragover',e=>e.preventDefault());
   inner.addEventListener('drop',e=>{
-    e.preventDefault();
-    const phase=e.dataTransfer.getData('phase');
-    if(!phase)return;
+    e.preventDefault();const ph=e.dataTransfer.getData('phase');
+    if(!ph)return;
     const rect=inner.getBoundingClientRect();
-    const x=e.clientX-rect.left;
-    const day=Math.round(x/DAY_W);
-    const el=Array.from(inner.querySelectorAll('.phase-blk')).find(b=>b.textContent.trim().startsWith(phase));
-    if(el) el.style.left=`${Math.max(0,day*DAY_W+4)}px`;
+    const day=Math.round((e.clientX-rect.left)/DW);
+    const el=[...inner.querySelectorAll('.phase-blk')].find(b=>b.textContent.trim().startsWith(ph));
+    if(el)el.style.left=`${day*DW+4}px`;
   });
-
-  // NOW indicator
-  const nowEl=document.createElement('div');
-  nowEl.id='tl-now';
-  nowEl.style.left=(2*DAY_W)+'px';
-  inner.appendChild(nowEl);
+  const now=document.createElement('div');now.id='tl-now';
+  const lbl=document.createElement('div');lbl.id='tl-now-lbl';lbl.textContent='NOW';
+  now.appendChild(lbl);now.style.left=(2*DW)+'px';
+  inner.appendChild(now);
 }
 buildTimeline();
 
-/* Timeline playback */
-let playing=false,nowPx=2*DAY_W,playIv;
+let playing=false,nowPx=2*DW,playIv;
 function tlToggle(){
   playing=!playing;
   const b=document.getElementById('play-btn');
-  b.textContent=playing?'⏸':'▶';
-  b.classList.toggle('on',playing);
+  b.textContent=playing?'⏸':'▶';b.classList.toggle('on',playing);
   if(playing){
     playIv=setInterval(()=>{
-      nowPx+=1.5;
-      if(nowPx>DAYS.length*DAY_W) nowPx=0;
-      const el=document.getElementById('tl-now');
-      if(el) el.style.left=nowPx+'px';
-      const track=document.getElementById('tl-track');
-      if(nowPx>track.scrollLeft+track.clientWidth-60) track.scrollLeft+=20;
+      nowPx+=1.5;if(nowPx>DAYS.length*DW)nowPx=0;
+      const n=document.getElementById('tl-now');if(n)n.style.left=nowPx+'px';
+      const tr=document.getElementById('tl-scroll');if(nowPx>tr.scrollLeft+tr.clientWidth-60)tr.scrollLeft+=20;
     },40);
-  } else {
-    clearInterval(playIv);
-  }
+  }else clearInterval(playIv);
 }
 function tlReset(){
-  playing=false;clearInterval(playIv);nowPx=2*DAY_W;
-  const b=document.getElementById('play-btn');
-  b.textContent='▶';b.classList.remove('on');
-  const el=document.getElementById('tl-now');
-  if(el) el.style.left=nowPx+'px';
-  document.getElementById('tl-track').scrollLeft=0;
+  playing=false;clearInterval(playIv);nowPx=2*DW;
+  const b=document.getElementById('play-btn');b.textContent='▶';b.classList.remove('on');
+  const n=document.getElementById('tl-now');if(n)n.style.left=nowPx+'px';
+  document.getElementById('tl-scroll').scrollLeft=0;
 }
 
-/* ═══════════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════════ */
-renderLP('analyze');
-renderQuick('analyze');
-aiMsg('OP IRON SENTINEL loaded. Terrain analysis, enemy disposition, ADA coverage, and approach routes are overlaid on the map.\n\nClick any element on the map for instant AI analysis, or switch modes at the top to begin planning.','ai');
+/* ═══ INIT ══════════════════════════════════════════════ */
+showEmpty();
+aiMsg('SENTINEL platform online. All connected systems active.\n\nThis is a **generic mission command interface**. I can build custom UI and workflows for any scenario — no two missions are the same.\n\nDescribe your mission need, or select a scenario to get started.','ai');
 </script>
 </body>
 </html>
