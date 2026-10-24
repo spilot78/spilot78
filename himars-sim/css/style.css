@@ -91,7 +91,10 @@ input, select {
   border: 1px solid var(--line); border-radius: 0;
   padding: 4px 6px; width: 100%;
 }
-input:focus, select:focus { outline: 1px solid var(--fg); }
+textarea { font: inherit; font-size: 11px; color: var(--fg); background: #030603; border: 1px solid var(--line); padding: 4px 6px; width: 100%; resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: 1px solid var(--fg); }
+textarea.bad { border-color: var(--red); }
+.metlink { display: block; margin: 6px 0; color: var(--cyan); font-size: 11px; letter-spacing: 0.08em; }
 input.bad { border-color: var(--red); color: var(--red); }
 output.ro { color: var(--fg); font-size: 12px; min-height: 18px; }
 output.big { font-size: 15px; }

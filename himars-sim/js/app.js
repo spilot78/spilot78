@@ -1,9 +1,13 @@
 import { ROCKETS } from './ballistics.js';
 import { standardProfile, windFrom } from './atmosphere.js';
 import {
-  distanceBearing, offsetToLatLon, toMGRS, parsePosition, degToMils,
+  distanceBearing, offsetToLatLon, toMGRS, toUTM, fromUTM, parsePosition, degToMils,
 } from './geo.js';
-import { fetchMet, fetchElevation } from './weather.js';
+import { fetchMet, fetchElevation, forecastUrl, parseForecast } from './weather.js';
+
+// Offline builds (e.g. a sandboxed page with no outside network) use the
+// built-in grid map and take met as pasted Open-Meteo JSON.
+const OFFLINE = Boolean(window.HIMARS_OFFLINE);
 
 const $ = (id) => document.getElementById(id);
 
@@ -31,8 +35,62 @@ const layers = {
     maxZoom: 19, attribution: 'Tiles © Esri',
   }),
 };
-layers.TOPO.addTo(map);
-L.control.layers(layers, null, { position: 'topright' }).addTo(map);
+// UTM grid drawn locally on canvas tiles: works with no tile server at all.
+const UtmGrid = L.GridLayer.extend({
+  createTile(coords) {
+    const size = this.getTileSize();
+    const tile = document.createElement('canvas');
+    tile.width = size.x; tile.height = size.y;
+    const ctx = tile.getContext('2d');
+    ctx.fillStyle = '#0b130c';
+    ctx.fillRect(0, 0, size.x, size.y);
+    const origin = coords.scaleBy(size);
+    const z = coords.z;
+    const toLL = (px, py) => map.unproject([origin.x + px, origin.y + py], z);
+    const toPx = (lat, lon) => map.project([lat, lon], z).subtract(origin);
+    const c = toLL(size.x / 2, size.y / 2);
+    if (Math.abs(c.lat) > 80) return tile;
+    const zone = toUTM(c.lat, c.lng).zone;
+    const south = c.lat < 0;
+    const corners = [[0, 0], [size.x, 0], [0, size.y], [size.x, size.y]]
+      .map(([x, y]) => { const ll = toLL(x, y); return toUTM(ll.lat, ll.lng, zone); });
+    const minE = Math.min(...corners.map((u) => u.easting)), maxE = Math.max(...corners.map((u) => u.easting));
+    const minN = Math.min(...corners.map((u) => u.northing)), maxN = Math.max(...corners.map((u) => u.northing));
+    const step = z >= 12 ? 1000 : z >= 9 ? 10000 : 100000;
+    const line = (pts, major) => {
+      ctx.strokeStyle = major ? '#2f6b36' : '#183a1c';
+      ctx.lineWidth = major ? 1.2 : 1;
+      ctx.beginPath();
+      pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      ctx.stroke();
+    };
+    const pt = (e, n) => { const ll = fromUTM(zone, e, n, south); return toPx(ll.lat, ll.lon); };
+    const label = (v) => String(Math.round(v / 1000) % 100).padStart(2, '0');
+    ctx.font = '10px IBM Plex Mono, monospace';
+    ctx.fillStyle = '#4f8f55';
+    for (let e = Math.floor(minE / step) * step; e <= maxE; e += step) {
+      const pts = [0, 0.25, 0.5, 0.75, 1].map((f) => pt(e, minN + f * (maxN - minN)));
+      line(pts, e % (step * 10) === 0);
+      const top = pts.reduce((a, p) => (p.y < a.y ? p : a));
+      if (step <= 10000) ctx.fillText(label(e), top.x + 2, 10);
+    }
+    for (let n = Math.floor(minN / step) * step; n <= maxN; n += step) {
+      const pts = [0, 0.25, 0.5, 0.75, 1].map((f) => pt(minE + f * (maxE - minE), n));
+      line(pts, n % (step * 10) === 0);
+      const left = pts.reduce((a, p) => (p.x < a.x ? p : a));
+      if (step <= 10000) ctx.fillText(label(n), 2, left.y - 2);
+    }
+    return tile;
+  },
+});
+const grid = new UtmGrid({ attribution: 'UTM grid' });
+if (OFFLINE) {
+  grid.addTo(map);
+} else {
+  layers.GRID = grid;
+  layers.TOPO.addTo(map);
+  L.control.layers(layers, null, { position: 'topright' }).addTo(map);
+}
 L.control.scale({ imperial: false }).addTo(map);
 
 const icon = (color) => L.divIcon({
@@ -99,7 +157,7 @@ async function setPoint(which, latlng, { keepAlt = false } = {}) {
   p.lon = ((latlng.lng ?? latlng.lon) + 540) % 360 - 180;
   clearSolution();
   renderPoints();
-  if (!keepAlt) {
+  if (!keepAlt && !OFFLINE) {
     try {
       p.alt = await fetchElevation(p.lat, p.lon);
       renderPoints();
@@ -197,6 +255,10 @@ function renderMetTable() {
 }
 
 async function loadLiveMet() {
+  if (OFFLINE) {
+    $('metLink').href = forecastUrl(state.launcher.lat, state.launcher.lon);
+    return;
+  }
   status('REQUESTING MET DATA…', 'busy');
   const { lat, lon } = state.launcher;
   try {
@@ -220,6 +282,7 @@ $('metSource').addEventListener('click', (e) => {
   state.metSource = src;
   for (const b of $('metSource').querySelectorAll('button')) b.classList.toggle('on', b.dataset.src === src);
   $('manualMet').classList.toggle('hidden', src !== 'manual');
+  $('pasteMet').classList.toggle('hidden', !OFFLINE || src !== 'live');
   $('metNote').textContent = src === 'std' ? 'ICAO standard atmosphere, no wind.'
     : src === 'manual' ? 'Surface values extrapolated aloft (std lapse, 1/7 power-law wind).' : $('metNote').textContent;
   clearSolution();
@@ -230,7 +293,15 @@ for (const id of ['mT', 'mP', 'mWd', 'mWs']) {
 }
 
 // ---------------------------------------------------------------- compute
-const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+function createWorker() {
+  // A bundled single-file build carries the worker source inline.
+  const inline = document.getElementById('worker-src');
+  if (inline) {
+    return new Worker(URL.createObjectURL(new Blob([inline.textContent], { type: 'text/javascript' })));
+  }
+  return new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+}
+const worker = createWorker();
 
 function compute() {
   clearSolution(); // invalidates any job still running in the worker
@@ -463,5 +534,29 @@ tick();
 // ---------------------------------------------------------------- init
 renderPoints();
 fitMission();
+if (OFFLINE) {
+  $('pasteMet').classList.remove('hidden');
+  $('metNote').textContent = 'Open the forecast link for the launcher position, copy the whole JSON page, and paste it below.';
+  $('lchrAlt').title = $('tgtAlt').title = 'Enter ground altitude by hand in this build';
+  $('metJson').addEventListener('input', () => {
+    const text = $('metJson').value.trim();
+    if (!text) return;
+    try {
+      state.liveMet = parseForecast(JSON.parse(text));
+      if (state.liveMet.levels.length < 3) throw new Error('no pressure-level data');
+      // The forecast grid cell's elevation is a good launcher altitude.
+      state.launcher.alt = state.liveMet.surface.elevation;
+      renderPoints();
+      $('metJson').classList.remove('bad');
+      status(`MET DATA LOADED — VALID ${state.liveMet.validTime.slice(11, 16).replace(':', '')}Z`);
+    } catch (err) {
+      state.liveMet = null;
+      $('metJson').classList.add('bad');
+      status(`MET JSON NOT RECOGNISED: ${String(err.message).toUpperCase()}`, 'err');
+    }
+    clearSolution();
+    renderMetTable();
+  });
+}
 renderMetTable();
 loadLiveMet();

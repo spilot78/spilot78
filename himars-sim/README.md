@@ -18,6 +18,14 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
+The map offers topographic, street and imagery tiles, plus a **GRID** layer: a
+UTM/MGRS grid drawn locally that needs no tile server.
+
+Setting `window.HIMARS_OFFLINE = true` before `js/app.js` loads switches to a
+build for sandboxed hosts with no outside network. It uses the grid map only,
+and takes live met as Open-Meteo JSON that you open via a link and paste in.
+Ground altitude is then entered by hand.
+
 Tests (Node 20+, no dependencies):
 
 ```sh
