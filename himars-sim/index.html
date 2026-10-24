@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HIMARS Trajectory Trainer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="bezel">
+    <header class="topbar">
+      <div class="brand">
+        <span class="led" id="led"></span>
+        <strong>MLRS FCS</strong><span class="dim">// HIMARS TRAJECTORY TRAINER</span>
+      </div>
+      <div class="topstat">
+        <span id="metStatus" class="tag warn">MET: STD</span>
+        <span id="dtg" class="dim">--</span>
+      </div>
+    </header>
+
+    <main class="screen">
+      <section class="col left">
+        <div class="panel">
+          <h2>LAUNCHER <span class="hint">POS / ALT</span></h2>
+          <label>GRID (MGRS or lat,lon)
+            <input id="lchrPos" spellcheck="false" autocomplete="off">
+          </label>
+          <div class="row">
+            <label>ALT m <input id="lchrAlt" type="number" step="1"></label>
+            <label>LAT/LON <output id="lchrLL" class="ro"></output></label>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>TARGET <span class="hint">CLICK MAP</span></h2>
+          <label>GRID (MGRS or lat,lon)
+            <input id="tgtPos" spellcheck="false" autocomplete="off">
+          </label>
+          <div class="row">
+            <label>ALT m <input id="tgtAlt" type="number" step="1"></label>
+            <label>LAT/LON <output id="tgtLL" class="ro"></output></label>
+          </div>
+          <div class="row">
+            <label>RANGE <output id="tgtRange" class="ro big"></output></label>
+            <label>DIR <output id="tgtDir" class="ro big"></output></label>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>MUNITION</h2>
+          <select id="munition"></select>
+          <div class="row">
+            <label>TRAJECTORY
+              <select id="angle">
+                <option value="low">LOW ANGLE</option>
+                <option value="high">HIGH ANGLE</option>
+              </select>
+            </label>
+            <label>MC ROUNDS
+              <select id="samples">
+                <option>100</option>
+                <option selected>200</option>
+                <option>500</option>
+              </select>
+            </label>
+          </div>
+          <p class="note" id="munitionNote"></p>
+        </div>
+
+        <div class="panel">
+          <h2>MET</h2>
+          <div class="seg" role="radiogroup" id="metSource">
+            <button data-src="live" class="on">LIVE</button>
+            <button data-src="std">STD</button>
+            <button data-src="manual">MANUAL</button>
+          </div>
+          <div id="manualMet" class="manual hidden">
+            <div class="row">
+              <label>SFC TEMP °C <input id="mT" type="number" step="0.1" value="15"></label>
+              <label>SFC PRES hPa <input id="mP" type="number" step="0.1" value="1013.2"></label>
+            </div>
+            <div class="row">
+              <label>WIND FROM ° <input id="mWd" type="number" step="1" value="270"></label>
+              <label>WIND m/s <input id="mWs" type="number" step="0.1" value="5"></label>
+            </div>
+          </div>
+          <p class="note" id="metNote">Live forecast column from Open-Meteo at the launcher.</p>
+        </div>
+      </section>
+
+      <section class="col center">
+        <div id="map" aria-label="Map"></div>
+        <div class="maplegend">
+          <span><i class="sw lchr"></i>LAUNCHER</span>
+          <span><i class="sw tgt"></i>AIMPOINT</span>
+          <span><i class="sw track"></i>GROUND TRACK</span>
+          <span><i class="sw e50"></i>50% AREA</span>
+          <span><i class="sw e95"></i>95% AREA</span>
+        </div>
+      </section>
+
+      <section class="col right">
+        <div class="panel">
+          <h2>FIRING DATA <span class="hint" id="solveTime"></span></h2>
+          <div class="readout">
+            <div class="cell"><span>AZ</span><b id="rAz">----</b><em>mils</em></div>
+            <div class="cell"><span>QE</span><b id="rQe">----</b><em>mils</em></div>
+          </div>
+          <dl class="kv" id="firing"></dl>
+          <div id="alert" class="alert hidden"></div>
+        </div>
+        <div class="panel">
+          <h2>IMPACT AREA <span class="hint" id="mcProgress"></span></h2>
+          <dl class="kv" id="impact"></dl>
+        </div>
+      </section>
+
+      <section class="bottom">
+        <div class="panel grow">
+          <h2>TRAJECTORY PROFILE</h2>
+          <canvas id="profile"></canvas>
+        </div>
+        <div class="panel met">
+          <h2>MET MESSAGE <span class="hint" id="metValid"></span></h2>
+          <div class="tablewrap">
+            <table id="metTable">
+              <thead><tr><th>ALT m</th><th>T °C</th><th>P hPa</th><th>DIR mil</th><th>SPD m/s</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="softkeys">
+      <button id="kLchr" title="Next map click places the launcher">F1<br>LCHR</button>
+      <button id="kTgt" title="Next map click places the target">F2<br>TGT</button>
+      <button id="kMet" title="Refresh met data">F3<br>MET</button>
+      <button id="kCompute" class="primary" title="Compute firing data and impact area">F4<br>COMPUTE</button>
+      <button id="kFit" title="Fit map to mission">F5<br>FIT</button>
+      <button id="kClear" title="Clear solution overlays">F6<br>CLEAR</button>
+    </nav>
+    <footer class="statusline">
+      <span id="status">READY</span>
+      <span class="dim">TRAINING SIMULATION · APPROXIMATE PUBLIC DATA · NOT FOR OPERATIONAL USE</span>
+    </footer>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
